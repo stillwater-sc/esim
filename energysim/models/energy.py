@@ -39,17 +39,20 @@ class EnergyDatabase:
         self.register_write_16b = 4.8
         self.register_write_32b = 9.6
 
-        self.l1_read = 5 # 8KB SRAM, 32b cacheline
-        self.l1_write = 8  #estimated
+        # 32-64KB SRAM, 32b cacheline
+        self.l1_read = 16  # 2pJ/bit, 8bit word
+        self.l1_write = 768  # 3pJ/bit, 32b cacheline
 
-        self.l2_read = 10 # estimated
-        self.l2_write = 15 # estimated
+        # 256KB SRAM, 32b cacheline
+        self.l2_read = 768 # 1.5x L1
+        self.l2_write = 1152 # 1.5x L1
 
-        self.l3_read = 25 # estimated
-        self.l3_write = 40 # estimated
+        # 2-4MB SRAM, 32b cachline
+        self.l3_read = 1152 # 1.5x L2
+        self.l3_write = 1728 # 1.5x L2
 
-        self.dram_read = 640
-        self.dram_write = 800
+        self.dram_read = 3840
+        self.dram_write = 5120
 
 
         # For a typical 14nm CMOS CPU:
@@ -86,3 +89,33 @@ class EnergyDatabase:
         #   Access transistor design
         #   Bitline and wordline capacitances
         #
+        # 32byte cacheline read  = 32*8*[1,1.5,2,3pJ] = 256, 384, 512, 768pJ
+        # 32byte cacheline write = 32*8*[2,3,4pJ] = 512, 768, 1024pJ
+
+        # For a DDR5 cacheline read in a 14nm CMOS system:
+        #
+        # Typical cacheline size: 64 bytes (512 bits)
+        # Energy per DDR5 read: Approximately 10-20 picojoules (pJ) per bit
+        # Total cacheline read energy: ~5-10 nanojoules (nJ)
+        #
+        # For a DDR5 cacheline write in a 14nm CMOS system:
+        #
+        # Typical cacheline size: 64 bytes (512 bits)
+        # Energy per DDR5 write: Approximately 15-25 picojoules (pJ) per bit
+        # Total cacheline write energy: ~8-13 nanojoules (nJ)
+        #
+        # The write energy is slightly higher than read energy due to:
+        #  Additional signal transitions
+        #  Power required to change memory state
+        #  Driving write circuitry
+        #  Increased signal conditioning requirements
+        #
+        # Factors affecting write energy include:
+        #  Memory controller design
+        #  Write amplifier circuits
+        #  Signal integrity techniques
+        #  Operating frequency
+        #  Physical transmission distance
+
+        # 32byte DDR5 read: 32*8*[10, 15, 20pJ] = 2560, 3840, 5120pJ
+        # 32byte DDR5 write: 32*8*[15, 20, 25pJ] = 3840, 5120, 6400pJ

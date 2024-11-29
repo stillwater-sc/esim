@@ -59,18 +59,20 @@ def flat_mv_spm(rows, cols, energies: 'EnergyDatabase') -> 'StoredProgramMachine
     cache_line_size = 32  # bytes
     matrix_elements = rows * cols
     vector_elements = cols
+    total_elements = matrix_elements + vector_elements
     matrix_cache_lines: int | Any = 1 + (matrix_elements / cache_line_size)
     vector_cache_lines: int | Any = 1 + (vector_elements / cache_line_size)
-    total_cache_lines: int | Any = matrix_cache_lines + vector_cache_lines
-    energy.l1_read = matrix_elements + vector_elements
-    energy.l1_write = total_cache_lines
-    energy.l2_read = total_cache_lines
-    energy.l2_write = total_cache_lines
-    energy.l3_read = total_cache_lines
-    energy.l3_write = total_cache_lines
+    total_cache_lines_in: int | Any = matrix_cache_lines + vector_cache_lines
+    total_cache_lines_out: int | Any = vector_cache_lines
+    energy.l1_read = total_elements * energies.l1_read
+    energy.l1_write = (total_cache_lines_in + total_cache_lines_out) * energies.l1_write
+    energy.l2_read = total_cache_lines_in * energies.l2_read
+    energy.l2_write = (total_cache_lines_in + total_cache_lines_out) * energies.l2_write
+    energy.l3_read = total_cache_lines_in * energies.l3_read
+    energy.l3_write = (total_cache_lines_in + total_cache_lines_out) * energies.l3_write
     # for the DRAM, we assume just the energy for compute, not memory management
     # to get the data structures into memory
-    energy.memory_read = total_cache_lines
-    energy.memory_write = total_cache_lines
+    energy.memory_read = total_cache_lines_in * energies.dram_read
+    energy.memory_write = total_cache_lines_out * energies.dram_write
 
     return energy
