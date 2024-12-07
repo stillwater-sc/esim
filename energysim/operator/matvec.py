@@ -75,4 +75,16 @@ def flat_mv_spm(rows, cols, energies: 'EnergyDatabase') -> 'StoredProgramMachine
     energy.memory_read = total_cache_lines_in * energies.dram_read
     energy.memory_write = total_cache_lines_out * energies.dram_write
 
+    # consolidate sets
+    energy.compute = energy.instruction + energy.execute + energy.register_read + energy.register_write
+    energy.l1 = energy.l1_read + energy.l1_write
+    energy.l2 = energy.l2_read + energy.l2_write
+    energy.l3 = energy.l3_read + energy.l3_write
+    energy.cache_read = energy.l1_read + energy.l2_read + energy.l3_read
+    energy.cache_write = energy.l1_write + energy.l2_write + energy.l3_write
+    energy.cache = energy.cache_read + energy.cache_write
+    energy.memory = energy.memory_read + energy.memory_write
+    energy.data_movement = energy.cache + energy.memory
+    energy.total = energy.compute + energy.data_movement
+
     return energy

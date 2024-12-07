@@ -17,6 +17,17 @@ class StoredProgramMachineEnergy:
         self.l3_write = 0
         self.memory_read = 0
         self.memory_write = 0
+        # consolidate sets
+        self.cache_read = 0
+        self.cache_write = 0
+        self.compute = 0
+        self.l1 = 0
+        self.l2 = 0
+        self.l3 = 0
+        self.cache = 0
+        self.memory = 0
+        self.data_movement = 0
+        self.total = 0
 
     def report(self):
         total_compute = self.instruction + self.execute + self.register_read + self.register_write
