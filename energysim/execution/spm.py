@@ -1,5 +1,5 @@
 from tabulate import tabulate
-from energysim.models.energy import EnergyDatabase
+from energysim.database.energy import EnergyDatabase
 
 class StoredProgramMachineEnergy:
     def __init__(self, name: str, db: 'EnergyDatabase'):

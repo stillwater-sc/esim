@@ -10,11 +10,13 @@ version information, and package-level imports.
 __version__ = "0.1.0"
 
 # Define what gets imported when someone does 'from energysim import *'
-__all__ = ['core', 'models', 'utils', 'linalg']
+__all__ = ['core', 'database', 'models', 'utils', 'linalg']
 
 # Import key classes or functions to make them easily accessible
 #from .core.data_processor import DataProcessor
-from .models.matvec import flat_matrix_vector_multiply, flat_mv_spm, EnergyDatabase, StoredProgramMachineEnergy
+from .database.energy import EnergyDatabase
+from .execution.spm import StoredProgramMachineEnergy
+from .operator.matvec import flat_matrix_vector_multiply, flat_mv_spm
 from .utils.logger import get_logger, LoggingContext, LoggerConfig
 from .linalg.vector import Vector
 from .linalg.matrix import Matrix

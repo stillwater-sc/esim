@@ -2,8 +2,8 @@ from typing import Any
 
 from energysim.linalg.vector import Vector
 from energysim.linalg.matrix import Matrix
-from energysim.models.energy import EnergyDatabase
-from energysim.models.spm import StoredProgramMachineEnergy
+from energysim.database.energy import EnergyDatabase
+from energysim.execution.spm import StoredProgramMachineEnergy
 
 # flat matrix-vector function
 def flat_matrix_vector_multiply(matrix: 'Matrix', vector: 'Vector') -> 'Vector':
