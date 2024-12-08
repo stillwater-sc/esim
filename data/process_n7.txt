@@ -1,0 +1,55 @@
+CPU Register Read for 7nm
+
+
+Energy: Approximately 0.1 to 0.3 picojoules (pJ)
+Very low energy consumption due to minimal capacitive switching
+Typically involves small, tightly-coupled storage elements
+
+
+L1 Cache Read:
+
+
+Energy: Around 1.0 to 2.5 picojoules (pJ)
+Higher energy compared to register read due to:
+
+Larger array size
+More complex sense amplifiers
+Longer bit lines
+Additional peripheral circuitry
+
+
+
+
+Instruction Fetch, Decode, and Dispatch:
+
+
+Total Energy: Approximately 5 to 10 picojoules (pJ)
+Breakdown:
+
+Fetch: 2-4 pJ
+Decode: 1-3 pJ
+Dispatch: 1-3 pJ
+
+
+Energy varies based on instruction complexity
+More complex instructions (e.g., vector or SIMD) consume more energy
+
+
+
+In a 7nm process node for a typical CPU, an L2 cache read energy is approximately 6 to 12 picojoules (pJ).
+The specific factors influencing L2 read energy include:
+
+Cache array size (typically 256KB to 1MB per core)
+Dynamic and static power characteristics of 7nm FinFET transistors
+Bit line length and capacitance
+Sense amplifier design
+Peripheral circuitry complexity
+
+The higher energy compared to L1 cache reads reflects:
+
+Larger physical array size
+Longer interconnect distances
+More complex peripheral circuits
+Additional tag and data matching logic
+
+The lower end of the range (6-8 pJ) represents more power-optimized designs, while the higher end (10-12 pJ) is typical for high-performance implementations prioritizing speed over energy efficiency.

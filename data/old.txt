@@ -1,0 +1,27 @@
+
+
+self.add_8b = 0.03
+self.add_16b = 0.05
+self.add_32b = 0.1
+
+self.mul_8b = 0.2
+self.mul_16b = 1.0  # estimated
+self.mul_32b = 3.1
+
+self.add_fp8 = 0.2  # estimated
+self.add_fp16 = 0.4
+self.add_fp32 = 0.9
+
+self.mul_fp8 = 0.4 # estimated
+self.mul_fp16 = 1.1
+self.mul_fp32 = 3.7
+
+# assuming 0.2pJ per bit
+self.register_read_8b = 1.6
+self.register_read_16b = 3.2
+self.register_read_32b = 6.4
+
+# assuming 0.3pJ per bit
+self.register_write_8b = 2.4
+self.register_write_16b = 4.8
+self.register_write_32b = 9.6

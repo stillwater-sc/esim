@@ -1,5 +1,5 @@
 from typing import Any
-
+from numpy.random import random
 from energysim.linalg.vector import Vector
 from energysim.linalg.matrix import Matrix
 from energysim.execution.spm import StoredProgramMachineEnergy
@@ -85,5 +85,9 @@ def flat_mv_spm(rows, cols, energies: 'StoredProgramMachineEventEnergy') -> 'Sto
     energy.memory = energy.memory_read + energy.memory_write
     energy.data_movement = energy.cache + energy.memory
     energy.total = energy.compute + energy.data_movement
+
+    energy.TIPS = random()
+    energy.TOPS = random()
+    energy.MemGOPS = random()
 
     return energy

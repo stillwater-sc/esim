@@ -28,6 +28,10 @@ class StoredProgramMachineEnergy:
         self.memory = 0
         self.data_movement = 0
         self.total = 0
+        # performance metrics
+        self.TIPS = 0   # instructions per second
+        self.TOPS = 0   # floating point operations per second
+        self.MemGOPS = 0   # memory operations per second
 
     def report(self):
         total_compute = self.instruction + self.execute + self.register_read + self.register_write
@@ -49,6 +53,8 @@ class StoredProgramMachineEnergy:
         self.memory = total_memory
         self.data_movement = total_data_movement
         self.total = total_energy
+
+
 
         if total_data_movement > 0:
             l1_read_relative = self.l1_read / total_data_movement
