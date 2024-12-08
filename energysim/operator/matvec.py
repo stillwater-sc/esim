@@ -2,7 +2,6 @@ from typing import Any
 
 from energysim.linalg.vector import Vector
 from energysim.linalg.matrix import Matrix
-from energysim.database.energy import EnergyDatabase
 from energysim.execution.spm import StoredProgramMachineEnergy
 
 # flat matrix-vector function
@@ -36,9 +35,9 @@ def flat_matrix_vector_multiply(matrix: 'Matrix', vector: 'Vector') -> 'Vector':
 
 
 
-def flat_mv_spm(rows, cols, energies: 'EnergyDatabase') -> 'StoredProgramMachineEnergy':
+def flat_mv_spm(rows, cols, energies: 'StoredProgramMachineEventEnergy') -> 'StoredProgramMachineEnergy':
     # enumerate all the energy consuming transactions for a matvec on an SPM
-    energy = StoredProgramMachineEnergy("Flat MV " + str(rows) + " x " + str(cols) + " SPM", energies)
+    energy = StoredProgramMachineEnergy("Flat MV " + str(rows) + " x " + str(cols) + " SPM")
 
     # nr of multiply-add operations
     nrMADDs: int | Any = rows * cols * 2
