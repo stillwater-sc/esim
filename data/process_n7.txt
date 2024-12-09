@@ -1,5 +1,14 @@
-CPU Register Read for 7nm
+In 7nm CMOS technology, typical operator energies (in picojoules):
 
+Integer Addition: 0.1 - 0.3 pJ
+Integer Multiplication: 1.0 - 2.5 pJ
+Floating-Point Addition: 0.5 - 1.2 pJ
+Floating-Point Multiplication: 2.0 - 4.0 pJ
+Floating-Point Division: 4 - 7 pJ
+Bitwise AND/OR: 0.05 - 0.2 pJ
+Shift Operations: 0.2 - 0.5 pJ
+
+CPU Register Read for 7nm
 
 Energy: Approximately 0.1 to 0.3 picojoules (pJ)
 Very low energy consumption due to minimal capacitive switching

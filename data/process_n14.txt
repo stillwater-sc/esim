@@ -1,3 +1,13 @@
+In 14nm CMOS technology, typical operator energies (in picojoules) are:
+
+Integer Addition: 0.2 - 0.5 pJ
+Integer Multiplication: 1.5 - 3.0 pJ
+Floating-Point Addition: 0.7 - 1.5 pJ
+Floating-Point Multiplication: 2.5 - 4.5 pJ
+Floating-Point Division: 5 - 8 pJ
+Bitwise AND/OR: 0.1 - 0.3 pJ
+Shift Operations: 0.3 - 0.6 pJ
+
 For a typical 14nm CMOS CPU:
 Instruction Fetch:
  5-10 pJ per instruction
@@ -62,6 +72,21 @@ Factors affecting write energy include:
 
 32byte DDR5 read: 32*8*[10, 15, 20pJ] = 2560, 3840, 5120pJ
 32byte DDR5 write: 32*8*[15, 20, 25pJ] = 3840, 5120, 6400pJ
+
+Estimated DDR5 DRAM burst read/write energy for 64-byte line:
+Read Energy: 8-15 picojoules (pJ)
+Write Energy: 12-20 picojoules (pJ)
+Factors influencing energy:
+
+DRAM I/O driver strength
+Signal integrity requirements
+Termination resistances
+Bus voltage
+Specific DDR5 speed grade
+
+Note: Precise values depend on specific implementation and operating conditions.
+These estimates are synthesized from architectural and semiconductor technology modeling, lacking a definitive single source.
+
 
 CPUs (14nm TSMC):
 

@@ -1,6 +1,6 @@
 from tabulate import tabulate
 
-class StoredProgramMachineEnergy:
+class StoredProgramMachineMetrics:
     def __init__(self, name: str):
         self.name = name
         # energy consumption variables

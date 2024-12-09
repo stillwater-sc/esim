@@ -1,0 +1,9 @@
+In 22nm CMOS technology, typical operator energies (in picojoules) are:
+
+Integer Addition: 0.3 - 0.7 pJ
+Integer Multiplication: 2.0 - 4.0 pJ
+Floating-Point Addition: 1.0 - 2.0 pJ
+Floating-Point Multiplication: 3.5 - 5.5 pJ
+Floating-Point Division: 7 - 10 pJ
+Bitwise AND/OR: 0.2 - 0.4 pJ
+Shift Operations: 0.4 - 0.8 pJ

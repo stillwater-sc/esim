@@ -1,8 +1,10 @@
 from typing import Any
 from numpy.random import random
+
+from energysim.database.spm_energy import StoredProgramMachineEventEnergy
 from energysim.linalg.vector import Vector
 from energysim.linalg.matrix import Matrix
-from energysim.execution.spm import StoredProgramMachineEnergy
+from energysim.execution.spm import StoredProgramMachineMetrics
 
 # flat matrix-vector function
 def flat_matrix_vector_multiply(matrix: 'Matrix', vector: 'Vector') -> 'Vector':
@@ -35,24 +37,24 @@ def flat_matrix_vector_multiply(matrix: 'Matrix', vector: 'Vector') -> 'Vector':
 
 
 
-def flat_mv_spm(rows, cols, energies: 'StoredProgramMachineEventEnergy') -> 'StoredProgramMachineEnergy':
+def flat_mv_spm(rows, cols, attributes: 'StoredProgramMachineEventEnergy') -> 'StoredProgramMachineMetrics':
     # enumerate all the energy consuming transactions for a matvec on an SPM
-    energy = StoredProgramMachineEnergy("Flat MV " + str(rows) + " x " + str(cols) + " SPM")
+    spm_metrics = StoredProgramMachineMetrics("Flat MV " + str(rows) + " x " + str(cols) + " SPM")
 
     # nr of multiply-add operations
-    nrMADDs: int | Any = rows * cols * 2
+    nr_multiply_adds: int | Any = rows * cols * 2
 
     # instructions flow through the fetch/decode/dispatch part of the pipeline
     # nr of instructions per multiply-add is roughly 13
-    nrOfInstructions: int | Any = nrMADDs * 13
-    energy.instruction = nrOfInstructions * energies.instruction
-    energy.execute = nrMADDs * energies.execute
+    nrOfInstructions: int | Any = nr_multiply_adds * 13
+    spm_metrics.instruction = nrOfInstructions * attributes.instruction
+    spm_metrics.execute = nr_multiply_adds * attributes.execute
     # we need to read two inputs for each MADD, and one read for writing
     # the result back to memory
-    energy.register_read = nrMADDs * 2 + nrMADDs
+    spm_metrics.register_read = nr_multiply_adds * 2 + nr_multiply_adds
     # we write the output of the MADD to the register file
     # and we need to write all the inputs into the register file too
-    energy.register_write = nrMADDs + nrMADDs * 2
+    spm_metrics.register_write = nr_multiply_adds + nr_multiply_adds * 2
 
     # flat mv assumes we are streaming to the cache without reuse
     cache_line_size = 32  # bytes
@@ -63,31 +65,43 @@ def flat_mv_spm(rows, cols, energies: 'StoredProgramMachineEventEnergy') -> 'Sto
     vector_cache_lines: int | Any = 1 + (vector_elements / cache_line_size)
     total_cache_lines_in: int | Any = matrix_cache_lines + vector_cache_lines
     total_cache_lines_out: int | Any = vector_cache_lines
-    energy.l1_read = total_elements * energies.l1_read
-    energy.l1_write = (total_cache_lines_in + total_cache_lines_out) * energies.l1_write
-    energy.l2_read = total_cache_lines_in * energies.l2_read
-    energy.l2_write = (total_cache_lines_in + total_cache_lines_out) * energies.l2_write
-    energy.l3_read = total_cache_lines_in * energies.l3_read
-    energy.l3_write = (total_cache_lines_in + total_cache_lines_out) * energies.l3_write
-    # for the DRAM, we assume just the energy for compute, not memory management
+    spm_metrics.l1_read = total_elements * attributes.l1_read
+    spm_metrics.l1_write = (total_cache_lines_in + total_cache_lines_out) * attributes.l1_write
+    spm_metrics.l2_read = total_cache_lines_in * attributes.l2_read
+    spm_metrics.l2_write = (total_cache_lines_in + total_cache_lines_out) * attributes.l2_write
+    spm_metrics.l3_read = total_cache_lines_in * attributes.l3_read
+    spm_metrics.l3_write = (total_cache_lines_in + total_cache_lines_out) * attributes.l3_write
+    # for the DRAM, we assume just the energy for reading the operands for compute,
+    # and do not include the energy required for memory management
     # to get the data structures into memory
-    energy.memory_read = total_cache_lines_in * energies.dram_read
-    energy.memory_write = total_cache_lines_out * energies.dram_write
+    spm_metrics.memory_read = total_cache_lines_in * attributes.dram_read
+    spm_metrics.memory_write = total_cache_lines_out * attributes.dram_write
 
     # consolidate sets
-    energy.compute = energy.instruction + energy.execute + energy.register_read + energy.register_write
-    energy.l1 = energy.l1_read + energy.l1_write
-    energy.l2 = energy.l2_read + energy.l2_write
-    energy.l3 = energy.l3_read + energy.l3_write
-    energy.cache_read = energy.l1_read + energy.l2_read + energy.l3_read
-    energy.cache_write = energy.l1_write + energy.l2_write + energy.l3_write
-    energy.cache = energy.cache_read + energy.cache_write
-    energy.memory = energy.memory_read + energy.memory_write
-    energy.data_movement = energy.cache + energy.memory
-    energy.total = energy.compute + energy.data_movement
+    spm_metrics.compute = spm_metrics.instruction + spm_metrics.execute + spm_metrics.register_read + spm_metrics.register_write
+    spm_metrics.l1 = spm_metrics.l1_read + spm_metrics.l1_write
+    spm_metrics.l2 = spm_metrics.l2_read + spm_metrics.l2_write
+    spm_metrics.l3 = spm_metrics.l3_read + spm_metrics.l3_write
+    spm_metrics.cache_read = spm_metrics.l1_read + spm_metrics.l2_read + spm_metrics.l3_read
+    spm_metrics.cache_write = spm_metrics.l1_write + spm_metrics.l2_write + spm_metrics.l3_write
+    spm_metrics.cache = spm_metrics.cache_read + spm_metrics.cache_write
+    spm_metrics.memory = spm_metrics.memory_read + spm_metrics.memory_write
+    spm_metrics.data_movement = spm_metrics.cache + spm_metrics.memory
+    spm_metrics.total = spm_metrics.compute + spm_metrics.data_movement
 
-    energy.TIPS = random()
-    energy.TOPS = random()
-    energy.MemGOPS = random()
+    # calculate performance metrics
+    # Matvec is memory bound, which implies that
+    # the number of operations are governed by number of operands we can fetch
+    memory_clock = attributes.memory_clock
 
-    return energy
+    # how much time would it take to pull the total number of cachelines in
+    # a DDR5 DIMM is 64bit wide, so to transfer a 64byte cacheline, we need
+    # 8 bus cycles, with is 4 memory clocks.
+    bandwidth = attributes.memory_clock * 8 * 2
+    throughput = total_cache_lines_in * attributes.cache_line_size / bandwidth
+    gops = 1.0 / throughput
+    spm_metrics.TIPS = gops / 100.0
+    spm_metrics.TOPS = gops / 1000.0
+    spm_metrics.MemGOPS = gops
+
+    return spm_metrics

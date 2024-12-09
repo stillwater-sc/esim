@@ -24,7 +24,6 @@ def randomize_spm(samples: int, process_node: str):
         energy.report()
         sample = process_node + str(sample)
         new_row = pd.DataFrame({'sample': [sample], 'performance': [energy.TIPS], 'energy': [energy.total]})
-        print(new_row)
         df = pd.concat([df,new_row], ignore_index=True)
 
     return df
