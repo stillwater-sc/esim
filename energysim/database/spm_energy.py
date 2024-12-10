@@ -1,14 +1,7 @@
-from typing import Any
 import pandas as pd
 from pyparsing import Empty
 
-
-#
-# sources: Claude.ai
-
-
-
-class StoredProgramMachineEventEnergy:
+class StoredProgramMachineEnergy:
     def __init__(self, node: str):
         self.node = node
 
@@ -35,8 +28,8 @@ class StoredProgramMachineEventEnergy:
         self.fma32b: int = 0
         self.fdiv32b: int = 0
 
-        self.reg_read: int = 0
-        self.reg_write: int = 0
+        self.register_read: int = 0
+        self.register_write: int = 0
 
         # cache event energies
         self.l1_read:int = 0   # per average word size
@@ -78,8 +71,8 @@ class StoredProgramMachineEventEnergy:
         -  fmul32b:     {self.fmul32b}
         -  fma32b:      {self.fma32b}
         -  fdiv32b:     {self.fdiv32b}
-        - Reg read:    {self.reg_read}
-        - Reg write:   {self.reg_write}
+        - Reg read:    {self.register_read}
+        - Reg write:   {self.register_write}
         - L1 read:     {self.l1_read}
         - L1 write:    {self.l1_write}
         - L2 read:     {self.l2_read}
@@ -115,7 +108,7 @@ class StoredProgramMachineEnergyDatabase:
     # Different operator models will use this configuration to calculate
     # energy consumption and performance of the operator when executing
     # on this SPM architecture
-    def generate(self, process_node: str, processor_clock_ghz: float, memory_clock_ghz: float, cache_line_size_in_bytes: int) -> StoredProgramMachineEventEnergy:
+    def generate(self, process_node: str, processor_clock_ghz: float, memory_clock_ghz: float, cache_line_size_in_bytes: int) -> StoredProgramMachineEnergy:
         if self.data is None:
             raise Empty
 
@@ -124,7 +117,6 @@ class StoredProgramMachineEnergyDatabase:
         print(df)
         print(df.index)
         print(df.columns)
-        attributes = df.columns
         select_process_node = df.loc[df['node'] == process_node]
         print(select_process_node)
 
@@ -132,7 +124,7 @@ class StoredProgramMachineEnergyDatabase:
         #    value = select_process_node[attribute]
         #    print(value)
 
-        spm_config = StoredProgramMachineEventEnergy(process_node)
+        spm_config = StoredProgramMachineEnergy(process_node)
 
         # defaults
         spm_config.processor_clock = processor_clock_ghz # GHz
@@ -171,10 +163,10 @@ class StoredProgramMachineEnergyDatabase:
 
         word_size_in_bits = 32
         # register events are per bit
-        reg_read = select_process_node['reg_read'].values[0]
-        reg_write = select_process_node['reg_write'].values[0]
-        spm_config.reg_read = reg_read * word_size_in_bits
-        spm_config.reg_write = reg_write * word_size_in_bits
+        register_read = select_process_node['reg_read'].values[0]
+        register_write = select_process_node['reg_write'].values[0]
+        spm_config.register_read = register_read * word_size_in_bits
+        spm_config.register_write = register_write * word_size_in_bits
 
         # l1 events are per bit
         l1_read_per_bit = select_process_node['l1_read'].values[0]
