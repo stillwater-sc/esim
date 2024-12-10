@@ -10,7 +10,7 @@ version information, and package-level imports.
 __version__ = "0.1.0"
 
 # Define what gets imported when someone does 'from energysim import *'
-__all__ = ['core', 'database', 'models', 'utils', 'linalg']
+__all__ = ['core', 'database', 'execution', 'operator', 'linalg', 'utils']
 
 # Import key classes or functions to make them easily accessible
 #from .core.data_processor import DataProcessor

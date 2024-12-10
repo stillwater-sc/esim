@@ -2,14 +2,6 @@
 
 class StoredProgramMachineEvents:
     def __init__(self):
-        # SPM attributes
-        self.cache_line_size: int = 0
-        self.memory_burst_size: int = 0
-        self.processor_clock: float = 0.0 # GHz
-        self.clock_cycle_ns: float  = 0.0  # nsec
-        self.memory_clock: float = 0.0    # GHz
-        self.memory_cycle_ns: float = 0.0  # nsec
-
         self.instructions: int = 0
 
         self.execute: int = 0   # execute is a consolidated energy of an average ALU operation
@@ -38,21 +30,12 @@ class StoredProgramMachineEvents:
         self.dram_write:int = 0 # memory burst
 
     def __repr__(self):
-        return f"StoredProgramMachineEventEnergy(node='{self.node}', cache_line_size={self.cache_line_size}, memory_burst_size={self.memory_burst_size}, processor_clock={self.processor_clock}, memory_clock={self.memory_clock}, ...)"
+        return f"StoredProgramMachineEvents(...)"
 
     def __str__(self):
         return f"""
-        Node: {self.node}
 
-        SPM Attributes:
-        - Cache line size:    {self.cache_line_size} bytes
-        - Memory burst size:  {self.memory_burst_size} bytes
-        - Processor clock:    {self.processor_clock} GHz
-        - Core Clock cycle:   {self.clock_cycle_ns} nsec
-        - Memory clock:       {self.memory_clock} GHz
-        - Memory Clock cycle: {self.memory_cycle_ns} nsec
-
-        Event Occurrences:
+        SPM Event Occurrences:
         - Instructions: {self.instructions}
         - Execute:      {self.execute}
         -  add32b:       {self.add32b}

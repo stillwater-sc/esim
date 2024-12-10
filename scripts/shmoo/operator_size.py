@@ -2,16 +2,18 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from energysim.database.energy import EnergyDatabase
+from energysim import StoredProgramMachineEnergyDatabase
 from energysim.operator.matvec import flat_mv_spm
 
 
 def sweep_operator_size(sizes):
     energies = []
 
-    energydb = EnergyDatabase()
+    db = StoredProgramMachineEnergyDatabase()
+    full = db.load_data('../../data/spm_energy.csv')
+    spm_attributes = db.generate('n14l', 2.5, 3.2, 64)
     for size in sizes:
-        energy = flat_mv_spm(size, size, energydb)
+        energy = flat_mv_spm(size, size, spm_attributes)
         energies.append(energy.total*1e-9)
 
     data = {'Size': sizes, 'Energy (mJ)': energies}
