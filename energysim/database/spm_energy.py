@@ -1,75 +1,146 @@
 import pandas as pd
+import numpy as np
 from pyparsing import Empty
 
+
+def generate_new_sample(value: float, proportion: float = 0.25) -> float:
+    low: float = (1.0 - proportion) * value
+    high: float = (1.0 + proportion) * value
+    sample: float = np.random.uniform(low, high)
+    return sample
+
 class StoredProgramMachineEnergy:
-    def __init__(self, node: str):
-        self.node = node
+    def __init__(self, identifier: str):
+        self.identifier = identifier
+
         # all energy metrics in pJ
-        self.instruction: int = 0
-        self.fetch: int = 0
-        self.decode: int = 0
-        self.dispatch: int = 0
+        self.instruction: float = 0
+        self.fetch: float = 0
+        self.decode: float = 0
+        self.dispatch: float = 0
 
-        self.execute: int = 0   # execute is a consolidated energy of an average ALU operation
+        self.execute: float = 0   # execute is a consolidated energy of an average ALU operation
         # specific ALU operations
-        self.add32b: int = 0
-        self.mul32b: int = 0
-        self.fadd32b: int = 0
-        self.fmul32b: int = 0
-        self.fma32b: int = 0
-        self.fdiv32b: int = 0
+        self.add32b: float = 0
+        self.mul32b: float = 0
+        self.fadd32b: float = 0
+        self.fmul32b: float = 0
+        self.fma32b: float = 0
+        self.fdiv32b: float = 0
 
-        self.register_read: int = 0
-        self.register_write: int = 0
+        self.register_read: float = 0
+        self.register_write: float = 0
 
         # cache event energies
-        self.l1_read:int = 0   # per average word size
-        self.l1_write:int = 0  # cacheline
+        self.l1_read:float = 0   # per average word size
+        self.l1_write:float = 0  # cacheline
 
-        self.l2_read:int = 0  # cacheline
-        self.l2_write:int = 0  # cacheline
+        self.l2_read:float = 0  # cacheline
+        self.l2_write:float = 0  # cacheline
 
-        self.l3_read:int = 0  # cacheline
-        self.l3_write:int = 0  # cacheline
+        self.l3_read:float = 0  # cacheline
+        self.l3_write:float = 0  # cacheline
 
-        self.dram_read:int = 0 # per memory burst
-        self.dram_write:int = 0 # memory burst
+        self.dram_read:float = 0 # per memory burst
+        self.dram_write:float = 0 # memory burst
 
         # consolidated energies
-        self.total:int = 0
-        self.compute:int = 0
-        self.data_movement:int = 0
+        self.total:float = 0
+        self.compute:float = 0
+        self.data_movement:float = 0
 
     def __repr__(self):
-        return f"StoredProgramMachineEventEnergy(node='{self.node}', cache_line_size={self.cache_line_size}, memory_burst_size={self.memory_burst_size}, processor_clock={self.processor_clock}, memory_clock={self.memory_clock}, ...)"
+        return f"StoredProgramMachineEnergy(node='{self.node}', cache_line_size={self.cache_line_size}, memory_burst_size={self.memory_burst_size}, processor_clock={self.processor_clock}, memory_clock={self.memory_clock}, ...)"
 
     def __str__(self):
         return f"""
         Node: {self.node}
 
         Energy Metrics (pJ):
+        - Total        {self.total}
+        -  compute:       {self.compute}
+        -  data movement: {self.data_movement}
+        
+        - Compute
         - Instruction: {self.instruction}
-        -   fetch:      {self.fetch}
-        -   decode:     {self.decode}
-        -   dispatch:   {self.dispatch}
+        -  fetch:       {self.fetch}
+        -  decode:      {self.decode}
+        -  dispatch:    {self.dispatch}
+        - Operand:     {self.register_read + self.register_write}
+        -  Reg read:    {self.register_read}
+        -  Reg write:   {self.register_write}
         - Execute:     {self.execute}
-        -  add32b:      {self.add32b}
-        -  mul32b:      {self.mul32b}
-        -  fadd32b:     {self.fadd32b}
-        -  fmul32b:     {self.fmul32b}
-        -  fma32b:      {self.fma32b}
-        -  fdiv32b:     {self.fdiv32b}
-        - Reg read:    {self.register_read}
-        - Reg write:   {self.register_write}
-        - L1 read:     {self.l1_read}
-        - L1 write:    {self.l1_write}
-        - L2 read:     {self.l2_read}
-        - L2 write:    {self.l2_write}
-        - L3 read:     {self.l3_read}
-        - L3 write:    {self.l3_write}
-        - DRAM read:   {self.dram_read}
-        - DRAM write:  {self.dram_write}
+        -  add:         {self.add32b}
+        -  mul:         {self.mul32b}
+        -  fadd:        {self.fadd32b}
+        -  fmul:        {self.fmul32b}
+        -  fma:         {self.fma32b}
+        -  fdiv:        {self.fdiv32b}
+
+        - Data Movement
+        -  L1 read:       {self.l1_read}
+        -  L1 write:      {self.l1_write}
+        -  L2 read:       {self.l2_read}
+        -  L2 write:      {self.l2_write}
+        -  L3 read:       {self.l3_read}
+        -  L3 write:      {self.l3_write}
+        -  DRAM read:     {self.dram_read}
+        -  DRAM write:    {self.dram_write}
         """
+
+    # Given an energy profile, randomize the values a little bit to emulate different designs
+    # Energy efficient designs would start from the 'low' corner of the energy profiles,
+    # high performance designs would start from the 'high' corner of the profile,
+    # and the mid-range designs would start from the 'typical' profile
+    def generate_randomized_delta(self, new_name: str, proportion: float) -> 'StoredProgramMachineEnergy':
+
+        # basic idea:
+        # we are taking an energy estimate of a logic/arithmetic circuit and we are going to
+        # randomize that around the value. We'll postulate that a range of (-25%, +25%)
+        # is sufficiently interesting
+
+        new_sample = StoredProgramMachineEnergy(new_name)
+        # instruction energies
+        new_sample.fetch = generate_new_sample(self.fetch, proportion)
+        new_sample.decode = generate_new_sample(self.decode, proportion)
+        new_sample.dispatch = generate_new_sample(self.dispatch, proportion)
+        new_sample.instruction = self.fetch + self.decode + self.dispatch
+
+        # execute energies
+        new_sample.add32b = generate_new_sample(self.add32b, proportion)
+        new_sample.mul32b = generate_new_sample(self.mul32b, proportion)
+        new_sample.fadd32b = generate_new_sample(self.fadd32b, proportion)
+        new_sample.fmul32b = generate_new_sample(self.fmul32b, proportion)
+        new_sample.fma32b = generate_new_sample(self.fma32b, proportion)
+        new_sample.fdiv32b = generate_new_sample(self.fdiv32b, proportion)
+        new_sample.execute = self.fma32b   # approximate until we have instruction profiles
+
+        new_sample.register_read = generate_new_sample(self.register_read, proportion)
+        new_sample.register_write = generate_new_sample(self.register_write, proportion)
+
+        # cache event energies
+        new_sample.l1_read = generate_new_sample(self.l1_read, proportion)
+        new_sample.l1_write = generate_new_sample(self.l1_write, proportion)
+
+        new_sample.l2_read = generate_new_sample(self.l2_read, proportion)
+        new_sample.l2_write = generate_new_sample(self.l2_write, proportion)
+
+        new_sample.l3_read = generate_new_sample(self.l3_read, proportion)
+        new_sample.l3_write = generate_new_sample(self.l3_write, proportion)
+
+        new_sample.dram_read = generate_new_sample(self.dram_read, proportion)
+        new_sample.dram_write = generate_new_sample(self.dram_write, proportion)
+
+        # consolidated energies
+        new_sample.compute = self.instruction + self.execute + self.register_read + self.register_write
+        l1 = self.l1_read + self.l1_write
+        l2 = self.l2_read + self.l2_write
+        l3 = self.l3_read + self.l3_write
+        memory = self.dram_read + self.dram_write
+        new_sample.data_movement = l1 + l2 + l3 + memory
+        new_sample.total = self.compute + self.data_movement
+        return new_sample
+
 
 # database of energy per event for a computational engine
 class StoredProgramMachineEnergyDatabase:
@@ -90,32 +161,27 @@ class StoredProgramMachineEnergyDatabase:
         self.data_source = data_source
         return pd.DataFrame(self.data)
 
-    # generate will create a Stored Program Machine configuration
-    # consisting of a set of energy values, architecture attributes,
-    # and performance attributes.
+    # lookupEnergySet takes an ASIC manufacturing node name, such as, 'n14s' for 14nm slow
+    # and return a set of energy values for different Stored Program Machine events,
+    # such as, l1 cache read, or a 32b floating-point multiplication.
     # Different operator models will use this configuration to calculate
     # energy consumption and performance of the operator when executing
-    # on this SPM architecture
-    def generate(self, node: str, cache_line_size_in_bytes: int) -> StoredProgramMachineEnergy:
+    # on a SPM architecture
+    def lookupEnergySet(self, node: str, cache_line_size_in_bytes: int) -> StoredProgramMachineEnergy:
         if self.data is None:
             raise Empty
 
         # query the database
         df = self.data.copy()
-        print(df)
-        print(df.index)
-        print(df.columns)
+        #print(df)
+        #print(df.index)
+        #print(df.columns)
         process_node = df.loc[df['node'] == node]
         if process_node is None:
             raise ValueError(f'Process {process_node} not supported')
 
-        print(process_node)
-
-        #for attribute in attributes:
-        #    value = select_process_node[attribute]
-        #    print(value)
-
-        spm_energies = StoredProgramMachineEnergy(process_node)
+        # create the set, initialize with the node string
+        spm_energies = StoredProgramMachineEnergy(node)
 
         # all energy metrics in pJ
         fetch_energy = process_node['fetch'].values[0]

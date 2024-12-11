@@ -17,7 +17,9 @@ __all__ = ['core', 'database', 'execution', 'operator', 'linalg', 'utils']
 from .database.spm_energy import StoredProgramMachineEnergyDatabase
 from .models.spm_configuration import StoredProgramMachineConfiguration
 from .execution.spm_metrics import StoredProgramMachineMetrics
-from .operator.matvec import flat_matrix_vector_multiply, flat_mv_spm
+from .operator.matvec import flat_matrix_vector_multiply
+from .operator.flat_matvec import flat_matvec_spm
+from .operator.flat_matmul import flat_matmul_spm
 from .utils.logger import get_logger, LoggingContext, LoggerConfig
 from .linalg.vector import Vector
 from .linalg.matrix import Matrix

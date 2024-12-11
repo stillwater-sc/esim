@@ -12,7 +12,7 @@ def sweep_operator_size(sizes):
 
     db = StoredProgramMachineEnergyDatabase()
     full = db.load_data('../../data/spm_energy.csv')
-    spm_energies = db.generate('n14l', 64)
+    spm_energies = db.lookupEnergySet('n14l', 64)
     spm_config = StoredProgramMachineConfiguration(2.5, 3.2, 64)
     for size in sizes:
         metrics = flat_mv_spm(size, size, spm_energies, spm_config)
