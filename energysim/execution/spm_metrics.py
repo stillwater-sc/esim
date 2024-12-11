@@ -72,6 +72,14 @@ class StoredProgramMachineMetrics:
         occurrence_energy = self.energy.get(key, 0)
         return occurrences, occurrence_energy
 
+    def occurrence(self, key: str) -> int:
+        occurrences = self.events.get(key, 0)
+        return occurrences
+
+    def occurrence_energy(self, key: str) -> float:
+        occurrence_energy = self.energy.get(key, 0)
+        return occurrence_energy
+
     def report(self):
         instruction_events = self.events['instruction']
         execute_events = self.events['execute']

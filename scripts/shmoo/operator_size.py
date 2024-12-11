@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from energysim import StoredProgramMachineEnergyDatabase
+from energysim.models.spm_configuration import StoredProgramMachineConfiguration
 from energysim.operator.matvec import flat_mv_spm
 
 
@@ -11,10 +12,11 @@ def sweep_operator_size(sizes):
 
     db = StoredProgramMachineEnergyDatabase()
     full = db.load_data('../../data/spm_energy.csv')
-    spm_attributes = db.generate('n14l', 2.5, 3.2, 64)
+    spm_energies = db.generate('n14l', 64)
+    spm_config = StoredProgramMachineConfiguration(2.5, 3.2, 64)
     for size in sizes:
-        energy = flat_mv_spm(size, size, spm_attributes)
-        energies.append(energy.total*1e-9)
+        metrics = flat_mv_spm(size, size, spm_energies, spm_config)
+        energies.append(metrics.gather('total')[1]*1e-9)
 
     data = {'Size': sizes, 'Energy (mJ)': energies}
     df = pd.DataFrame(data)

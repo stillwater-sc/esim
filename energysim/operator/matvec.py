@@ -3,10 +3,9 @@ from typing import Any, Tuple
 from numpy.random import random
 
 from energysim.database.spm_energy import StoredProgramMachineEnergy
-from energysim.execution.spm_events import StoredProgramMachineEvents
 from energysim.linalg.vector import Vector
 from energysim.linalg.matrix import Matrix
-from energysim.execution.spm import StoredProgramMachineMetrics
+from energysim.execution.spm_metrics import StoredProgramMachineMetrics
 from energysim.models.spm_configuration import StoredProgramMachineConfiguration
 
 
@@ -74,7 +73,7 @@ def flat_mv_spm(rows, cols, attributes: 'StoredProgramMachineEnergy', config: 'S
     total_cache_lines_out: int = vector_cache_lines
     total_cache_lines: int = (total_cache_lines_in + total_cache_lines_out)
 
-    spm_metrics.record('l1_read', total_cache_lines_in, attributes.l1_read)
+    spm_metrics.record('l1_read', fmas*2, attributes.l1_read)
     spm_metrics.record('l1_write', total_cache_lines, attributes.l1_write)
 
     spm_metrics.record('l2_read', total_cache_lines_in, attributes.l2_read)
