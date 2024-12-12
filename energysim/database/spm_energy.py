@@ -2,10 +2,18 @@ import pandas as pd
 import numpy as np
 from pyparsing import Empty
 
+from energysim.models.spm_configuration import StoredProgramMachineConfiguration, DesignCategory
 
-def generate_new_sample(value: float, proportion: float = 0.25) -> float:
-    low: float = (1.0 - proportion) * value
-    high: float = (1.0 + proportion) * value
+# generate a randomized sample. lowerbound and upperbound are specified as proportions to the
+# input value and thus should be in the range [0, 1]
+def generate_new_sample(value: float, lowerbound: float = 0.0, upperbound: float = 0.0) -> float:
+    diff = upperbound - lowerbound
+    if diff < 0.01:
+        return value
+
+    # generate a randomized value in the range
+    low: float = lowerbound * value
+    high: float = upperbound * value
     sample: float = np.random.uniform(low, high)
     return sample
 
@@ -92,44 +100,57 @@ class StoredProgramMachineEnergy:
     # Energy efficient designs would start from the 'low' corner of the energy profiles,
     # high performance designs would start from the 'high' corner of the profile,
     # and the mid-range designs would start from the 'typical' profile
-    def generate_randomized_delta(self, new_name: str, proportion: float) -> 'StoredProgramMachineEnergy':
+    def generate_randomized_delta(self, new_name: str, proportion: float, config: 'StoredProgramMachineConfiguration') -> 'StoredProgramMachineEnergy':
 
         # basic idea:
         # we are taking an energy estimate of a logic/arithmetic circuit and we are going to
         # randomize that around the value. We'll postulate that a range of (-25%, +25%)
         # is sufficiently interesting
-
         new_sample = StoredProgramMachineEnergy(new_name)
+
+        if config.category == DesignCategory.EnergyEfficient:
+            lowerbound = 1.0 - proportion
+            upperbound = 1.0
+        elif config.category == DesignCategory.HighVolume:
+            lowerbound = 1.0 - (0.5*proportion)
+            upperbound = 1.0 + (0.5*proportion)
+        elif config.category == DesignCategory.HighPerformance:
+            lowerbound = 1.0
+            upperbound = 1.0 + proportion
+        else:
+            lowerbound = 0.0
+            upperbound = 0.0
+
         # instruction energies
-        new_sample.fetch = generate_new_sample(self.fetch, proportion)
-        new_sample.decode = generate_new_sample(self.decode, proportion)
-        new_sample.dispatch = generate_new_sample(self.dispatch, proportion)
+        new_sample.fetch = generate_new_sample(self.fetch, lowerbound, upperbound)
+        new_sample.decode = generate_new_sample(self.decode, lowerbound, upperbound)
+        new_sample.dispatch = generate_new_sample(self.dispatch, lowerbound, upperbound)
         new_sample.instruction = self.fetch + self.decode + self.dispatch
 
         # execute energies
-        new_sample.add32b = generate_new_sample(self.add32b, proportion)
-        new_sample.mul32b = generate_new_sample(self.mul32b, proportion)
-        new_sample.fadd32b = generate_new_sample(self.fadd32b, proportion)
-        new_sample.fmul32b = generate_new_sample(self.fmul32b, proportion)
-        new_sample.fma32b = generate_new_sample(self.fma32b, proportion)
-        new_sample.fdiv32b = generate_new_sample(self.fdiv32b, proportion)
+        new_sample.add32b = generate_new_sample(self.add32b, lowerbound, upperbound)
+        new_sample.mul32b = generate_new_sample(self.mul32b, lowerbound, upperbound)
+        new_sample.fadd32b = generate_new_sample(self.fadd32b, lowerbound, upperbound)
+        new_sample.fmul32b = generate_new_sample(self.fmul32b, lowerbound, upperbound)
+        new_sample.fma32b = generate_new_sample(self.fma32b, lowerbound, upperbound)
+        new_sample.fdiv32b = generate_new_sample(self.fdiv32b, lowerbound, upperbound)
         new_sample.execute = self.fma32b   # approximate until we have instruction profiles
 
-        new_sample.register_read = generate_new_sample(self.register_read, proportion)
-        new_sample.register_write = generate_new_sample(self.register_write, proportion)
+        new_sample.register_read = generate_new_sample(self.register_read, lowerbound, upperbound)
+        new_sample.register_write = generate_new_sample(self.register_write, lowerbound, upperbound)
 
         # cache event energies
-        new_sample.l1_read = generate_new_sample(self.l1_read, proportion)
-        new_sample.l1_write = generate_new_sample(self.l1_write, proportion)
+        new_sample.l1_read = generate_new_sample(self.l1_read, lowerbound, upperbound)
+        new_sample.l1_write = generate_new_sample(self.l1_write, lowerbound, upperbound)
 
-        new_sample.l2_read = generate_new_sample(self.l2_read, proportion)
-        new_sample.l2_write = generate_new_sample(self.l2_write, proportion)
+        new_sample.l2_read = generate_new_sample(self.l2_read, lowerbound, upperbound)
+        new_sample.l2_write = generate_new_sample(self.l2_write, lowerbound, upperbound)
 
-        new_sample.l3_read = generate_new_sample(self.l3_read, proportion)
-        new_sample.l3_write = generate_new_sample(self.l3_write, proportion)
+        new_sample.l3_read = generate_new_sample(self.l3_read, lowerbound, upperbound)
+        new_sample.l3_write = generate_new_sample(self.l3_write, lowerbound, upperbound)
 
-        new_sample.dram_read = generate_new_sample(self.dram_read, proportion)
-        new_sample.dram_write = generate_new_sample(self.dram_write, proportion)
+        new_sample.dram_read = generate_new_sample(self.dram_read, lowerbound, upperbound)
+        new_sample.dram_write = generate_new_sample(self.dram_write, lowerbound, upperbound)
 
         # consolidated energies
         new_sample.compute = self.instruction + self.execute + self.register_read + self.register_write

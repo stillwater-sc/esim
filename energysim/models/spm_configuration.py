@@ -1,12 +1,20 @@
 
+from enum import Enum
+
+class DesignCategory(Enum):
+    EnergyEfficient = 1
+    HighVolume = 2
+    HighPerformance = 3
+
 
 class StoredProgramMachineConfiguration:
-    def __init__(self, processor_clock_ghz: float, memory_clock_ghz: float, cache_line_size_in_bytes: int):
+    def __init__(self, category: 'DesignCategory', processor_clock_ghz: float, memory_clock_ghz: float, cache_line_size_in_bytes: int):
         # SPM attributes
         # structure
         self.cache_line_size: int = cache_line_size_in_bytes
         self.memory_burst_size: int = cache_line_size_in_bytes
-        # time
+        # attributes
+        self.category: DesignCategory = category
         self.processor_clock: float = processor_clock_ghz # GHz
         self.clock_cycle_ns: float  = 1.0 / processor_clock_ghz  # nsec
         self.memory_clock: float = memory_clock_ghz    # GHz
@@ -23,6 +31,7 @@ class StoredProgramMachineConfiguration:
         - Cache line size:    {self.cache_line_size} bytes
         - Memory burst size:  {self.memory_burst_size} bytes
         
+        - Design Category:    {self.category}
         - Processor clock:    {self.processor_clock} GHz
         - Core Clock cycle:   {self.clock_cycle_ns} nsec
         - Memory clock:       {self.memory_clock} GHz
