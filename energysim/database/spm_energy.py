@@ -1,22 +1,13 @@
 import pandas as pd
-import numpy as np
+
 from pyparsing import Empty
 
 from energysim.models.spm_configuration import StoredProgramMachineConfiguration, DesignCategory
+from energysim.utils.randomizer import randomizer
 
-# generate a randomized sample. lowerbound and upperbound are specified as proportions to the
-# input value and thus should be in the range [0, 1]
-def generate_new_sample(value: float, lowerbound: float = 0.0, upperbound: float = 0.0) -> float:
-    diff = upperbound - lowerbound
-    if diff < 0.01:
-        return value
 
-    # generate a randomized value in the range
-    low: float = lowerbound * value
-    high: float = upperbound * value
-    sample: float = np.random.uniform(low, high)
-    return sample
-
+# Characteristic event energies of a Stored Program Machine
+# can be single core or multi-core, just depends on the aggregation
 class StoredProgramMachineEnergy:
     def __init__(self, identifier: str):
         self.identifier = identifier
@@ -122,35 +113,35 @@ class StoredProgramMachineEnergy:
             upperbound = 0.0
 
         # instruction energies
-        new_sample.fetch = generate_new_sample(self.fetch, lowerbound, upperbound)
-        new_sample.decode = generate_new_sample(self.decode, lowerbound, upperbound)
-        new_sample.dispatch = generate_new_sample(self.dispatch, lowerbound, upperbound)
+        new_sample.fetch = randomizer(self.fetch, lowerbound, upperbound)
+        new_sample.decode = randomizer(self.decode, lowerbound, upperbound)
+        new_sample.dispatch = randomizer(self.dispatch, lowerbound, upperbound)
         new_sample.instruction = self.fetch + self.decode + self.dispatch
 
         # execute energies
-        new_sample.add32b = generate_new_sample(self.add32b, lowerbound, upperbound)
-        new_sample.mul32b = generate_new_sample(self.mul32b, lowerbound, upperbound)
-        new_sample.fadd32b = generate_new_sample(self.fadd32b, lowerbound, upperbound)
-        new_sample.fmul32b = generate_new_sample(self.fmul32b, lowerbound, upperbound)
-        new_sample.fma32b = generate_new_sample(self.fma32b, lowerbound, upperbound)
-        new_sample.fdiv32b = generate_new_sample(self.fdiv32b, lowerbound, upperbound)
+        new_sample.add32b = randomizer(self.add32b, lowerbound, upperbound)
+        new_sample.mul32b = randomizer(self.mul32b, lowerbound, upperbound)
+        new_sample.fadd32b = randomizer(self.fadd32b, lowerbound, upperbound)
+        new_sample.fmul32b = randomizer(self.fmul32b, lowerbound, upperbound)
+        new_sample.fma32b = randomizer(self.fma32b, lowerbound, upperbound)
+        new_sample.fdiv32b = randomizer(self.fdiv32b, lowerbound, upperbound)
         new_sample.execute = self.fma32b   # approximate until we have instruction profiles
 
-        new_sample.register_read = generate_new_sample(self.register_read, lowerbound, upperbound)
-        new_sample.register_write = generate_new_sample(self.register_write, lowerbound, upperbound)
+        new_sample.register_read = randomizer(self.register_read, lowerbound, upperbound)
+        new_sample.register_write = randomizer(self.register_write, lowerbound, upperbound)
 
         # cache event energies
-        new_sample.l1_read = generate_new_sample(self.l1_read, lowerbound, upperbound)
-        new_sample.l1_write = generate_new_sample(self.l1_write, lowerbound, upperbound)
+        new_sample.l1_read = randomizer(self.l1_read, lowerbound, upperbound)
+        new_sample.l1_write = randomizer(self.l1_write, lowerbound, upperbound)
 
-        new_sample.l2_read = generate_new_sample(self.l2_read, lowerbound, upperbound)
-        new_sample.l2_write = generate_new_sample(self.l2_write, lowerbound, upperbound)
+        new_sample.l2_read = randomizer(self.l2_read, lowerbound, upperbound)
+        new_sample.l2_write = randomizer(self.l2_write, lowerbound, upperbound)
 
-        new_sample.l3_read = generate_new_sample(self.l3_read, lowerbound, upperbound)
-        new_sample.l3_write = generate_new_sample(self.l3_write, lowerbound, upperbound)
+        new_sample.l3_read = randomizer(self.l3_read, lowerbound, upperbound)
+        new_sample.l3_write = randomizer(self.l3_write, lowerbound, upperbound)
 
-        new_sample.dram_read = generate_new_sample(self.dram_read, lowerbound, upperbound)
-        new_sample.dram_write = generate_new_sample(self.dram_write, lowerbound, upperbound)
+        new_sample.dram_read = randomizer(self.dram_read, lowerbound, upperbound)
+        new_sample.dram_write = randomizer(self.dram_write, lowerbound, upperbound)
 
         # consolidated energies
         new_sample.compute = self.instruction + self.execute + self.register_read + self.register_write
