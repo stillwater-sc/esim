@@ -1,8 +1,8 @@
 from energysim.models.design_category import DesignCategory
 
-class StoredProgramMachineConfiguration:
+class GraphicsProcessingUnitConfiguration:
     def __init__(self, category: 'DesignCategory', processor_clock_ghz: float, memory_clock_ghz: float, cache_line_size_in_bytes: int):
-        # SPM attributes
+        # GPU attributes
         # structure
         self.cache_line_size: int = cache_line_size_in_bytes
         self.memory_burst_size: int = cache_line_size_in_bytes
@@ -15,12 +15,12 @@ class StoredProgramMachineConfiguration:
 
 
     def __repr__(self):
-        return f"StoredProgramMachineConfiguration(clock='{self.processor_clock}'GHz', ...)"
+        return f"GraphicsProcessingUnitConfiguration(clock='{self.processor_clock}'GHz', ...)"
 
     def __str__(self):
         return f"""
 
-        SPM Configuration:
+        GPU Configuration:
         - Cache line size:    {self.cache_line_size} bytes
         - Memory burst size:  {self.memory_burst_size} bytes
         

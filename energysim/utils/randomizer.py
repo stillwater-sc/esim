@@ -7,7 +7,7 @@ def randomizer(value: float, lowerbound: float = 0.0, upperbound: float = 0.0) -
     lowerbound and upperbound are specified as proportions to the
     input value and thus should be in the range [0, 1]
 
-    Args: 
+    Args:
         value (float): the value to be randomized
         lowerbound (float): the lower bound of the range
         upperbound (float): the upper bound of the range
