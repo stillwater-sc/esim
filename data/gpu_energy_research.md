@@ -259,6 +259,37 @@ Comparison to Theoretical Limits:
 - Architectural design choices deliberately constrain clock speed
 - Performance achieved through width (32 threads) rather than pure clock frequency
 
+## Shared Memory Access energies
+
+
+For shared memory in the GeForce 10 series GPU (14nm TSMC/Samsung process), I'll provide energy estimates based on typical SRAM array characteristics:
+
+Shared Memory Read Energy:
+- Estimated 2-4 picojoules per 32-bit word
+- Considering 32-thread warp access pattern
+- Total warp read: ~64-128 pJ per access
+
+Shared Memory Write Energy:
+- Slightly higher than read due to bitline charging
+- Estimated 3-5 picojoules per 32-bit word
+- Total warp write: ~96-160 pJ per access
+
+Key Influencing Factors:
+- SRAM cell design
+- Array size
+- Access pattern
+- 14nm process node leakage and switching characteristics
+- Shared memory block size (typically 48KB per SM in that generation)
+
+These estimates account for:
+- Bitline charging energy
+- Sense amplifier activation
+- Address decoding
+- Data movement overhead
+
+Actual values would depend on specific microarchitectural details of the exact GPU implementation.
+
+Would you like me to elaborate on any aspect of these shared memory energy estimates?
 
 
 

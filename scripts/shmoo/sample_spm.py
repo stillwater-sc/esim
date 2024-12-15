@@ -20,10 +20,15 @@ def randomize_spm(nr_samples: int, process_node: str):
         raise ValueError(f'Process {selected_node} not supported')
 
     # create a database of progressively more performant Stored Program Machines
-    processor_clock_ghz = 2.5
-    processor_clock_increment = (4.0-2.5)/(nr_samples+1)
-    memory_clock_ghz = 2.7
-    memory_clock_increment = (6.5-2.7)/(nr_samples+1)
+    # clock frequency range of a Intel iCore 2 2018-2019 in 14nm Intel
+    low_cf = 2.5 # GHz
+    high_cf = 4.0 # GHz
+    processor_clock_ghz = low_cf
+    processor_clock_increment = (high_cf - low_cf)/nr_samples
+    low_mf = 2.7 # GHz   that is a 2700MHz DDR
+    high_mf = 4.5 # GHz  that is a 4500MHz DDR
+    memory_clock_ghz = low_mf
+    memory_clock_increment = (high_mf - low_mf)/nr_samples
     category = DesignCategory.EnergyEfficient
     spm_configs = []
     midrange_index = (nr_samples // 3) - 1

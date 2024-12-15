@@ -1,4 +1,7 @@
+from warnings import onceregistry
+
 import pandas as pd
+from pandas.plotting import andrews_curves
 
 from pyparsing import Empty
 
@@ -15,7 +18,7 @@ class GraphicsProcessingUnitEnergy:
         self.identifier = identifier
 
         # all energy metrics in pJ
-        self.instruction: float = 0
+        self.thread: float = 0
         self.fetch: float = 0
         self.decode: float = 0
         self.dispatch: float = 0
@@ -32,18 +35,19 @@ class GraphicsProcessingUnitEnergy:
         self.register_read: float = 0
         self.register_write: float = 0
 
+        # structural aggregations to support SIMT thread management
+        self.warp: float = 0
+        self.block: float = 0
+
         # cache event energies
         self.l1_read: float = 0  # per average word size
         self.l1_write: float = 0  # cacheline
-
-        self.l2_read: float = 0  # cacheline
-        self.l2_write: float = 0  # cacheline
-
-        self.l3_read: float = 0  # cacheline
-        self.l3_write: float = 0  # cacheline
-
-        self.dram_read: float = 0  # per memory burst
-        self.dram_write: float = 0  # memory burst
+        # SMEM - shared memory accesses
+        self.smem_read: float = 0  # 32b word
+        self.smem_write: float = 0  # 32b word
+        # GMEM - global memory accesses
+        self.gmem_read: float = 0  # per memory burst
+        self.gmem_write: float = 0  # memory burst
 
         # consolidated energies
         self.total: float = 0
@@ -51,11 +55,11 @@ class GraphicsProcessingUnitEnergy:
         self.data_movement: float = 0
 
     def __repr__(self):
-        return f"StoredProgramMachineEnergy(node='{self.node}', cache_line_size={self.cache_line_size}, memory_burst_size={self.memory_burst_size}, processor_clock={self.processor_clock}, memory_clock={self.memory_clock}, ...)"
+        return f"GraphicsProcessingUnitEnergy(identifier='{self.identifier}',...)"
 
     def __str__(self):
         return f"""
-        Node: {self.node}
+        ID: {self.identifier}
 
         Energy Metrics (pJ):
         - Total        {self.total}
@@ -63,7 +67,7 @@ class GraphicsProcessingUnitEnergy:
         -  data movement: {self.data_movement}
 
         - Compute
-        - Instruction: {self.instruction}
+        - Thread:      {self.instruction}
         -  fetch:       {self.fetch}
         -  decode:      {self.decode}
         -  dispatch:    {self.dispatch}
@@ -77,14 +81,15 @@ class GraphicsProcessingUnitEnergy:
         -  fmul:        {self.fmul32b}
         -  fma:         {self.fma32b}
         -  fdiv:        {self.fdiv32b}
+        - Warp:        {self.warp}
 
         - Data Movement
-        -  L1 read:       {self.l1_read}
-        -  L1 write:      {self.l1_write}
-        -  L2 read:       {self.l2_read}
-        -  L2 write:      {self.l2_write}
-        -  DRAM read:     {self.dram_read}
-        -  DRAM write:    {self.dram_write}
+        -  L1 read:     {self.l1_read}
+        -  L1 write:    {self.l1_write}
+        -  SMEM read:   {self.smem_read}
+        -  SMEM write:  {self.smem_write}
+        -  GMEM read:   {self.gmem_read}
+        -  GMEM write:  {self.gmem_write}
         """
 
     # Given an energy profile, randomize the values a little bit to emulate different designs
@@ -92,13 +97,13 @@ class GraphicsProcessingUnitEnergy:
     # high performance designs would start from the 'high' corner of the profile,
     # and the mid-range designs would start from the 'typical' profile
     def generate_randomized_delta(self, new_name: str, proportion: float,
-                                  config: 'StoredProgramMachineConfiguration') -> 'StoredProgramMachineEnergy':
+                                  config: 'GraphicsProcessingUnitConfiguration') -> 'GraphicsProcessingUnitEnergy':
 
         # basic idea:
         # we are taking an energy estimate of a logic/arithmetic circuit and we are going to
         # randomize that around the value. We'll postulate that a range of (-25%, +25%)
         # is sufficiently interesting
-        new_sample = StoredProgramMachineEnergy(new_name)
+        new_sample = GraphicsProcessingUnitEnergy(new_name)
 
         if config.category == DesignCategory.EnergyEfficient:
             lowerbound = 1.0 - proportion
@@ -135,28 +140,24 @@ class GraphicsProcessingUnitEnergy:
         new_sample.l1_read = randomizer(self.l1_read, lowerbound, upperbound)
         new_sample.l1_write = randomizer(self.l1_write, lowerbound, upperbound)
 
-        new_sample.l2_read = randomizer(self.l2_read, lowerbound, upperbound)
-        new_sample.l2_write = randomizer(self.l2_write, lowerbound, upperbound)
+        new_sample.l2_read = randomizer(self.smem_read, lowerbound, upperbound)
+        new_sample.l2_write = randomizer(self.smem_write, lowerbound, upperbound)
 
-        new_sample.l3_read = randomizer(self.l3_read, lowerbound, upperbound)
-        new_sample.l3_write = randomizer(self.l3_write, lowerbound, upperbound)
-
-        new_sample.dram_read = randomizer(self.dram_read, lowerbound, upperbound)
-        new_sample.dram_write = randomizer(self.dram_write, lowerbound, upperbound)
+        new_sample.dram_read = randomizer(self.gmem_read, lowerbound, upperbound)
+        new_sample.dram_write = randomizer(self.gmem_write, lowerbound, upperbound)
 
         # consolidated energies
-        new_sample.compute = self.instruction + self.execute + self.register_read + self.register_write
+        new_sample.compute = self.thread + self.execute + self.register_read + self.register_write
         l1 = self.l1_read + self.l1_write
-        l2 = self.l2_read + self.l2_write
-        l3 = self.l3_read + self.l3_write
-        memory = self.dram_read + self.dram_write
-        new_sample.data_movement = l1 + l2 + l3 + memory
+        smem = self.smem_read + self.smem_write
+        gmem = self.gmem_read + self.gmem_write
+        new_sample.data_movement = l1 + smem + gmem
         new_sample.total = self.compute + self.data_movement
         return new_sample
 
 
-# database of energy per event for a computational engine
-class StoredProgramMachineEnergyDatabase:
+# database of energy per event for a Graphics Processing Unit computational engine
+class GraphicsProcessingUnitEnergyDatabase:
     def __init__(self):
         self.data = None
         self.data_source = None
@@ -175,17 +176,17 @@ class StoredProgramMachineEnergyDatabase:
         return pd.DataFrame(self.data)
 
     # lookupEnergySet takes an ASIC manufacturing node name, such as, 'n14s' for 14nm slow
-    # and return a set of energy values for different Stored Program Machine events,
-    # such as, l1 cache read, or a 32b floating-point multiplication.
+    # and return a set of energy values for different GPU events,
+    # such as, l1 cache read, shared memory access, or a 32b floating-point multiplication.
     # Different operator models will use this configuration to calculate
     # energy consumption and performance of the operator when executing
     # on a SPM architecture
-    def lookupEnergySet(self, node: str, cache_line_size_in_bytes: int) -> StoredProgramMachineEnergy:
+    def lookupEnergySet(self, node: str, cache_line_size_in_bytes: int) -> GraphicsProcessingUnitEnergy:
         if self.data is None:
             raise Empty
 
         # query the database
-        df = self.data.copy()
+        df = self.data.copy()  # do we need to copy it? are all the operators on the db read-only?
         # print(df)
         # print(df.index)
         # print(df.columns)
@@ -194,17 +195,34 @@ class StoredProgramMachineEnergyDatabase:
             raise ValueError(f'Process {process_node} not supported')
 
         # create the set, initialize with the node string
-        spm_energies = StoredProgramMachineEnergy(node)
+        gpu_energies = GraphicsProcessingUnitEnergy(node)
 
         # all energy metrics in pJ
+
+        # The instruction stream on a GPU is fetch and decode once, and
+        # dispatch to Arithmetic Instruction Units inside the Streaming Multiprocessors.
+        # The execute stage inside the Streaming Processor will read from the local thread register file.
         fetch_energy = process_node['fetch'].values[0]
         decode_energy = process_node['decode'].values[0]
         dispatch_energy = process_node['dispatch'].values[0]
-        instruction_energy = fetch_energy + decode_energy + dispatch_energy
-        spm_energies.instruction = instruction_energy
-        spm_energies.fetch = fetch_energy
-        spm_energies.decode = decode_energy
-        spm_energies.dispatch = dispatch_energy
+        thread_energy = fetch_energy + decode_energy + dispatch_energy
+        gpu_energies.thread = thread_energy
+        gpu_energies.fetch = fetch_energy
+        gpu_energies.decode = decode_energy
+        gpu_energies.dispatch = dispatch_energy
+
+        # a
+
+        # NVIDIA uses Warps, and AMD uses Workgroups
+
+        # an NVIDIA SM and an AMD CU execute 4 Warps/Wavefront concurrently
+        # typically scheduled one clock after each other.
+
+        # to know how much energy is being spent by the SM/CU we need to
+        # know how many Warp/Wavefronts the workload contains
+        # a Warp is 32 threads, but a Wavefront is 64 work-items
+        # Let's standardize on 32 threads/work-items
+        # For matvec, each thread
 
         add32b = process_node['add32b'].values[0]
         mul32b = process_node['mul32b'].values[0]
@@ -212,47 +230,41 @@ class StoredProgramMachineEnergyDatabase:
         fmul32b = process_node['fmul32b'].values[0]
         fma32b = process_node['fma32b'].values[0]
         fdiv32b = process_node['fdiv32b'].values[0]
-        spm_energies.add32b = add32b
-        spm_energies.mul32b = mul32b
-        spm_energies.fadd32b = fadd32b
-        spm_energies.fmul32b = fmul32b
-        spm_energies.fma32b = fma32b
-        spm_energies.fdiv32b = fdiv32b
-        spm_energies.execute = fma32b
+        gpu_energies.add32b = add32b
+        gpu_energies.mul32b = mul32b
+        gpu_energies.fadd32b = fadd32b
+        gpu_energies.fmul32b = fmul32b
+        gpu_energies.fma32b = fma32b
+        gpu_energies.fdiv32b = fdiv32b
+        gpu_energies.execute = fma32b
 
         word_size_in_bits = 32
         # register events are per bit
         register_read = process_node['reg_read'].values[0]
         register_write = process_node['reg_write'].values[0]
-        spm_energies.register_read = register_read * word_size_in_bits
-        spm_energies.register_write = register_write * word_size_in_bits
+        gpu_energies.register_read = register_read * word_size_in_bits
+        gpu_energies.register_write = register_write * word_size_in_bits
 
         # l1 events are per bit
         l1_read_per_bit = process_node['l1_read'].values[0]
         l1_write_per_bit = process_node['l1_write'].values[0]
 
-        spm_energies.l1_read = word_size_in_bits * l1_read_per_bit
-        spm_energies.l1_write = cache_line_size_in_bytes * 8 * l1_write_per_bit
+        gpu_energies.l1_read = word_size_in_bits * l1_read_per_bit
+        gpu_energies.l1_write = cache_line_size_in_bytes * 8 * l1_write_per_bit
 
-        # l2 events are per bit
-        l2_read_per_bit = process_node['l2_read'].values[0]
-        l2_write_per_bit = process_node['l2_write'].values[0]
-        spm_energies.l2_read = cache_line_size_in_bytes * 8 * l2_read_per_bit  # 768 # 1.5x L1
-        spm_energies.l2_write = cache_line_size_in_bytes * 8 * l2_write_per_bit  # 1152 # 1.5x L1
+        # shared memory events are per bit
+        smem_read_per_bit = process_node['l2_read'].values[0]
+        smem_write_per_bit = process_node['l2_write'].values[0]
+        gpu_energies.l2_read = word_size_in_bits * 8 * smem_read_per_bit  # 768 # 1.5x L1
+        gpu_energies.l2_write = word_size_in_bits * 8 * smem_write_per_bit  # 1152 # 1.5x L1
 
-        # l3 events are per bit
-        l3_read_per_bit = process_node['l3_read'].values[0]
-        l3_write_per_bit = process_node['l3_write'].values[0]
-        spm_energies.l3_read = cache_line_size_in_bytes * 8 * l3_read_per_bit  # 1152 # 1.5x L2
-        spm_energies.l3_write = cache_line_size_in_bytes * 8 * l3_write_per_bit  # 1728 # 1.5x L2
-
-        # memory events are per bit
+        # global memory events are per bit
         mem_read_per_bit = process_node['mem_read'].values[0]
         mem_write_per_bit = process_node['mem_write'].values[0]
-        spm_energies.dram_read = cache_line_size_in_bytes * 8 * mem_read_per_bit  # 3840
-        spm_energies.dram_write = cache_line_size_in_bytes * 8 * mem_write_per_bit  # 5120
+        gpu_energies.dram_read = word_size_in_bits * 8 * mem_read_per_bit  # 3840
+        gpu_energies.dram_write = word_size_in_bits * 8 * mem_write_per_bit  # 5120
 
-        return spm_energies
+        return gpu_energies
 
 
 
