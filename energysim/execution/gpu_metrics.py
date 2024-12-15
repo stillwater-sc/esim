@@ -7,6 +7,7 @@ class GraphicsProcessingUnitMetrics:
         # tracking events and energy for a collection of categories
         self.keys:[] = [
             'thread',
+            'instruction',
             'execute',
             'add',
             'mul',
@@ -130,7 +131,7 @@ class GraphicsProcessingUnitMetrics:
                 ["- Shared Memory", smem_events, smem_energy, 100 * smem_energy / total_energy],
                 ["-  read", smem_read_events, smem_read_energy, 100 * smem_read_energy / total_energy],
                 ["-  write", smem_write_events, smem_write_energy, 100 * smem_write_energy / total_energy],
-                ["GLobal Memory", gmem_events, gmem_energy, 100 * gmem_energy / total_energy],
+                ["Global Memory", gmem_events, gmem_energy, 100 * gmem_energy / total_energy],
                 ["- read", gmem_read_events, gmem_read_energy, 100 * gmem_read_energy / total_energy],
                 ["- write", gmem_write_events, gmem_write_energy, 100 * gmem_write_energy / total_energy]
 

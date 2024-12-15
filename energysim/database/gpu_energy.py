@@ -1,7 +1,4 @@
-from warnings import onceregistry
-
 import pandas as pd
-from pandas.plotting import andrews_curves
 
 from pyparsing import Empty
 
@@ -19,9 +16,10 @@ class GraphicsProcessingUnitEnergy:
 
         # all energy metrics in pJ
         self.thread: float = 0
+        self.instruction: float = 0
         self.fetch: float = 0
         self.decode: float = 0
-        self.dispatch: float = 0
+        self.dispatch: float = 0  # database is per thread, energy measured per warp (== 32 threads)
 
         self.execute: float = 0  # execute is a consolidated energy of an average ALU operation
         # specific ALU operations
@@ -67,10 +65,10 @@ class GraphicsProcessingUnitEnergy:
         -  data movement: {self.data_movement}
 
         - Compute
-        - Thread:      {self.instruction}
-        -  fetch:       {self.fetch}
-        -  decode:      {self.decode}
-        -  dispatch:    {self.dispatch}
+        - Thread:      {self.thread}
+        -  instruction: {self.instruction}
+        -   fetch:       {self.fetch}
+        -   decode:      {self.decode}
         - Operand:     {self.register_read + self.register_write}
         -  Reg read:    {self.register_read}
         -  Reg write:   {self.register_write}
@@ -82,14 +80,14 @@ class GraphicsProcessingUnitEnergy:
         -  fma:         {self.fma32b}
         -  fdiv:        {self.fdiv32b}
         - Warp:        {self.warp}
-
+        -  dispatch:    {self.dispatch}
         - Data Movement
         -  L1 read:     {self.l1_read}
         -  L1 write:    {self.l1_write}
-        -  SMEM read:   {self.smem_read}
-        -  SMEM write:  {self.smem_write}
-        -  GMEM read:   {self.gmem_read}
-        -  GMEM write:  {self.gmem_write}
+        -  smem read:   {self.smem_read}
+        -  smem write:  {self.smem_write}
+        -  gmem read:   {self.gmem_read}
+        -  gmem write:  {self.gmem_write}
         """
 
     # Given an energy profile, randomize the values a little bit to emulate different designs
@@ -140,11 +138,11 @@ class GraphicsProcessingUnitEnergy:
         new_sample.l1_read = randomizer(self.l1_read, lowerbound, upperbound)
         new_sample.l1_write = randomizer(self.l1_write, lowerbound, upperbound)
 
-        new_sample.l2_read = randomizer(self.smem_read, lowerbound, upperbound)
-        new_sample.l2_write = randomizer(self.smem_write, lowerbound, upperbound)
+        new_sample.smem_read = randomizer(self.smem_read, lowerbound, upperbound)
+        new_sample.smem_write = randomizer(self.smem_write, lowerbound, upperbound)
 
-        new_sample.dram_read = randomizer(self.gmem_read, lowerbound, upperbound)
-        new_sample.dram_write = randomizer(self.gmem_write, lowerbound, upperbound)
+        new_sample.gmem_read = randomizer(self.gmem_read, lowerbound, upperbound)
+        new_sample.gmem_write = randomizer(self.gmem_write, lowerbound, upperbound)
 
         # consolidated energies
         new_sample.compute = self.thread + self.execute + self.register_read + self.register_write
@@ -205,11 +203,13 @@ class GraphicsProcessingUnitEnergyDatabase:
         fetch_energy = process_node['fetch'].values[0]
         decode_energy = process_node['decode'].values[0]
         dispatch_energy = process_node['dispatch'].values[0]
-        thread_energy = fetch_energy + decode_energy + dispatch_energy
-        gpu_energies.thread = thread_energy
+        instruction_energy = fetch_energy + decode_energy
+        gpu_energies.instruction = instruction_energy
         gpu_energies.fetch = fetch_energy
         gpu_energies.decode = decode_energy
         gpu_energies.dispatch = dispatch_energy
+        thread_energy = instruction_energy + dispatch_energy * 32
+        gpu_energies.thread = thread_energy
 
         # a
 
@@ -236,7 +236,8 @@ class GraphicsProcessingUnitEnergyDatabase:
         gpu_energies.fmul32b = fmul32b
         gpu_energies.fma32b = fma32b
         gpu_energies.fdiv32b = fdiv32b
-        gpu_energies.execute = fma32b
+        gpu_energies.execute = fma32b   # representing the average case of a collection of ALU instructions
+        # for BLAS operators, they are all FMAs so reasonable assumption
 
         word_size_in_bits = 32
         # register events are per bit
@@ -253,16 +254,17 @@ class GraphicsProcessingUnitEnergyDatabase:
         gpu_energies.l1_write = cache_line_size_in_bytes * 8 * l1_write_per_bit
 
         # shared memory events are per bit
-        smem_read_per_bit = process_node['l2_read'].values[0]
-        smem_write_per_bit = process_node['l2_write'].values[0]
-        gpu_energies.l2_read = word_size_in_bits * 8 * smem_read_per_bit  # 768 # 1.5x L1
-        gpu_energies.l2_write = word_size_in_bits * 8 * smem_write_per_bit  # 1152 # 1.5x L1
+        smem_read_per_bit = process_node['smem_read'].values[0]
+        smem_write_per_bit = process_node['smem_write'].values[0]
+        gpu_energies.smem_read = word_size_in_bits * smem_read_per_bit
+        gpu_energies.smem_write = word_size_in_bits * smem_write_per_bit
 
         # global memory events are per bit
-        mem_read_per_bit = process_node['mem_read'].values[0]
-        mem_write_per_bit = process_node['mem_write'].values[0]
-        gpu_energies.dram_read = word_size_in_bits * 8 * mem_read_per_bit  # 3840
-        gpu_energies.dram_write = word_size_in_bits * 8 * mem_write_per_bit  # 5120
+        mem_read_per_bit = process_node['gmem_read'].values[0]
+        mem_write_per_bit = process_node['gmem_write'].values[0]
+        memory_burst_in_bytes = 64
+        gpu_energies.gmem_read = memory_burst_in_bytes * 8 * mem_read_per_bit  # 3840
+        gpu_energies.gmem_write = memory_burst_in_bytes * 8 * mem_write_per_bit  # 5120
 
         return gpu_energies
 

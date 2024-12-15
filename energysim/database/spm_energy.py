@@ -49,11 +49,11 @@ class StoredProgramMachineEnergy:
         self.data_movement:float = 0
 
     def __repr__(self):
-        return f"StoredProgramMachineEnergy(node='{self.node}', cache_line_size={self.cache_line_size}, memory_burst_size={self.memory_burst_size}, processor_clock={self.processor_clock}, memory_clock={self.memory_clock}, ...)"
+        return f"StoredProgramMachineEnergy(node='{self.identifier}', ...)"
 
     def __str__(self):
         return f"""
-        Node: {self.node}
+        Node: {self.identifier}
 
         Energy Metrics (pJ):
         - Total        {self.total}
