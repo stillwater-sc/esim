@@ -1,11 +1,12 @@
 from energysim.models.design_category import DesignCategory
 
 class StoredProgramMachineConfiguration:
-    def __init__(self, category: 'DesignCategory', processor_clock_ghz: float, memory_clock_ghz: float, cache_line_size_in_bytes: int):
+    def __init__(self, category: 'DesignCategory', processor_clock_ghz: float, memory_clock_ghz: float, cache_line_size_in_bytes: int, memory_burst_size_in_bytes: int, word_size_in_bytes: int):
         # SPM attributes
         # structure
         self.cache_line_size: int = cache_line_size_in_bytes
         self.memory_burst_size: int = cache_line_size_in_bytes
+        self.word_size: int = word_size_in_bytes
         # attributes
         self.category: DesignCategory = category
         self.processor_clock: float = processor_clock_ghz # GHz
@@ -23,6 +24,7 @@ class StoredProgramMachineConfiguration:
         SPM Configuration:
         - Cache line size:    {self.cache_line_size} bytes
         - Memory burst size:  {self.memory_burst_size} bytes
+        - Word size:          {self.word_size} bytes
         
         - Design Category:    {self.category}
         - Processor clock:    {self.processor_clock} GHz

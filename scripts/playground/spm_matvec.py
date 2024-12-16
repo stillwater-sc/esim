@@ -8,7 +8,9 @@ if __name__ == '__main__':
     full = db.load_data('../../data/spm_energy.csv')
     spm_energies = db.lookupEnergySet('n14l', 64)
     print(spm_energies)
-    spm_config = StoredProgramMachineConfiguration(DesignCategory.HighVolume,2.5, 3.2, 64)
-    spm_metrics = flat_matvec_spm(16, 16, spm_energies, spm_config)
+    rows = 1024*1024
+    cols = 1024
+    spm_config = StoredProgramMachineConfiguration(DesignCategory.HighVolume,2.5, 3.2, 64, 64, 4)
+    spm_metrics = flat_matvec_spm(rows, cols, spm_energies, spm_config)
     spm_metrics.report()
 

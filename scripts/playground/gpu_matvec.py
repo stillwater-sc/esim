@@ -38,14 +38,21 @@ if __name__ == '__main__':
     memory_clock_ghz = 4.0
     word_size_in_bits = 32
     memory_burst_in_bytes = 64
-
+    cache_line_size_in_bytes = 64
+    word_size_in_bytes = 4   # 4 bytes for single precision, 2 bytes for half, and 1 byte for FP8
+    memory_burst_size_in_bytes = 64 # typically can be 32b, 64b, 128bytes
+    memory_channels = 4
+    channel_width_in_bytes = 8 # LPDDR tends to be 2 bytes, DDR and GDDR tend to be 8 bytes, HBM is 128 bytes
 
     config = GraphicsProcessingUnitConfiguration(
         category,
         core_clock_ghz,
         memory_clock_ghz,
-        word_size_in_bits,
-        memory_burst_in_bytes,
+        word_size_in_bytes,
+        cache_line_size_in_bytes,
+        memory_burst_size_in_bytes,
+        memory_channels,
+        channel_width_in_bytes,
         threads_per_block,
         blocks_per_grid
     )

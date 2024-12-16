@@ -8,7 +8,17 @@ from energysim.models.design_category import DesignCategory
 from energysim.operator.flat_matvec import flat_matvec_gpu
 
 
-def sample_gpu(process_node: str, category: 'DesignCategory', core_clock_ghz: float, memory_clock_ghz: float, word_size_in_bits: int, memory_burst_in_bytes: int,threads_per_block: int, blocks_per_grid: int) -> 'GraphicsProcessingUnitMetrics':
+def sample_gpu(process_node: str,
+               category: 'DesignCategory',
+               core_clock_ghz: float,
+               memory_clock_ghz: float,
+               word_size_in_bytes: int,
+               cache_line_size_in_bytes: int,
+               memory_burst_size_in_bytes: int,
+               memory_channels: int,
+               channel_width_in_bytes: int,
+               threads_per_block: int,
+               blocks_per_grid: int) -> 'GraphicsProcessingUnitMetrics':
     db = GraphicsProcessingUnitEnergyDatabase()
     full = db.load_data('../../data/gpu_energy.csv')  # this returns a full DataFrame, but we ignore it
     #print(full)
@@ -21,13 +31,20 @@ def sample_gpu(process_node: str, category: 'DesignCategory', core_clock_ghz: fl
     if selected_node is None:
         raise ValueError(f'Process {selected_node} not supported')
 
-    sample_name = process_node + '_sample'
+    #cache_line_size_in_bytes  typically 32 or 64
+    #word_size_in_bytes   4 bytes for single precision, 2 bytes for half, and 1 byte for FP8
+    #memory_burst_size_in_bytes  typically can be 32b, 64b, 128bytes
+    #memory_channels = 4
+    #channel_width_in_bytes =  LPDDR tends to be 2 bytes, DDR and GDDR tend to be 8 bytes, HBM is 128 bytes
     config = GraphicsProcessingUnitConfiguration(
         category,
         core_clock_ghz,
         memory_clock_ghz,
-        word_size_in_bits,
-        memory_burst_in_bytes,
+        word_size_in_bytes,
+        cache_line_size_in_bytes,
+        memory_burst_size_in_bytes,
+        memory_channels,
+        channel_width_in_bytes,
         threads_per_block,
         blocks_per_grid
     )
@@ -67,8 +84,11 @@ def randomize_gpu(nr_samples: int, process_node: str):
     gpu_configs = []
     midrange_index = (nr_samples // 3) - 1
     highperformance_index = (2 * nr_samples // 3)
-    word_size_in_bits = 32
+    cache_line_size_in_bytes = 64
+    word_size_in_bytes = 4
     memory_burst_size_in_bytes = 64   # typically can be 32b, 64b, 128bytes
+    memory_channels = 4
+    channel_width_in_bytes = 8  # LPDDR tends to be 2 bytes, DDR and GDDR tend to be 8 bytes, HBM is 128 bytes
     # Configure grid and block dimensions for a one-dimensional blocking: one thread per row-col dot product
     threads_per_block = 128
     blocks_per_grid = (rows + threads_per_block - 1) // threads_per_block
@@ -77,8 +97,11 @@ def randomize_gpu(nr_samples: int, process_node: str):
             category,
             core_clock_ghz,
             memory_clock_ghz,
-            word_size_in_bits,
+            word_size_in_bytes,
+            cache_line_size_in_bytes,
             memory_burst_size_in_bytes,
+            memory_channels,
+            channel_width_in_bytes,
             threads_per_block,
             blocks_per_grid
         )

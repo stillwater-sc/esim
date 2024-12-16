@@ -1,11 +1,24 @@
 from energysim.models.design_category import DesignCategory
 
 class GraphicsProcessingUnitConfiguration:
-    def __init__(self, category: 'DesignCategory', core_clock_ghz: float, memory_clock_ghz: float, word_size_in_bits: int, memory_burst_size_in_bytes: int, threads_per_block: int, blocks_per_grid: int):
+    def __init__(self,
+                 category: 'DesignCategory',
+                 core_clock_ghz: float,
+                 memory_clock_ghz: float,
+                 word_size_in_bytes: int,
+                 cache_line_size_in_bytes: int,
+                 memory_burst_size_in_bytes: int,
+                 memory_channels: int,
+                 channel_width_in_bytes: int,
+                 threads_per_block: int,
+                 blocks_per_grid: int):
         # GPU attributes
         # structure
-        self.word_size: int = word_size_in_bits
+        self.word_size: int = word_size_in_bytes
+        self.cache_line_size: int = cache_line_size_in_bytes
         self.memory_burst_size: int = memory_burst_size_in_bytes
+        self.memory_channels: int = memory_channels
+        self.channel_width: int = channel_width_in_bytes
         # attributes
         self.category: DesignCategory = category
         self.core_clock: float = core_clock_ghz # GHz
@@ -24,7 +37,11 @@ class GraphicsProcessingUnitConfiguration:
         return f"""
 
         GPU Configuration:
+        - Cache line size:    {self.cache_line_size} bytes
         - Memory burst size:  {self.memory_burst_size} bytes
+        - Word size:          {self.word_size} bytes
+        - Memory channels:    {self.memory_channels}
+        - Channel width:       {self.channel_width} bytes
         
         - Design Category:    {self.category}
         - Core clock:         {self.core_clock} GHz

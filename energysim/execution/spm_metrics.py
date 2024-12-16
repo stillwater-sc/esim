@@ -1,5 +1,8 @@
 from tabulate import tabulate
 
+from energysim.utils.scientific_format import scientific_format
+
+
 class StoredProgramMachineMetrics:
     def __init__(self, name: str):
         self.name = name
@@ -38,10 +41,22 @@ class StoredProgramMachineMetrics:
         self.events = dict.fromkeys(self.keys, 0)
         self.energy = dict.fromkeys(self.keys, 0.0)
 
+        # machine attributes
+        self.core_clock_ghz: float = 0
+        self.memory_clock_ghz: float = 0
+        self.cache_line_size: int = 0
+        self.memory_burst: int = 0
         # performance metrics
-        self.TIPS = 0   # instructions per second
-        self.TOPS = 0   # floating point operations per second
-        self.MemGOPS = 0   # memory operations per second
+        self.elapsed_time: float = 0
+        self.instr_per_sec: float = 0   # instructions per second
+        self.flops_per_sec: float = 0   # floating point operations per second
+        self.memory_ops: int = 0
+        self.memory_clock_ns: float = 0  # memory clock cycle in nano-seconds
+        self.memops_per_sec: float = 0   # memory operations per second
+        self.read_data: float = 0 # memory read in MB
+        self.write_data: float = 0 # memory written in MB
+        self.memory_read_bw: float = 0  # memory read bandwidth in GB/s
+        self.memory_write_bw: float = 0  # memory write bandwidth in GB/s
 
     def __repr__(self):
         return f"StoredProgramMachineMetrics(name='{self.name}', ...)"
@@ -144,4 +159,23 @@ class StoredProgramMachineMetrics:
 
         print(tabulate(data, headers="firstrow", floatfmt=".1f"))
 
+        print()
+        print(f'Machine Configuration')
+        print(f'Cache line size : {self.cache_line_size} bytes')
+        print(f'Memory burst    : {self.memory_burst} bytes')
+        print(f'Core clock      : {self.core_clock_ghz} GHz')
+        print(f'Memory clock    : {self.memory_clock_ghz} GHz')
+
+        print()
+        print(f'Performance summary')
+        print(f'Elapsed time      : ' + scientific_format(self.elapsed_time, 'sec'))
+        print(f'IPS               : ' + scientific_format(self.instr_per_sec, 'IPS'))
+        print(f'FLOPS             : ' + scientific_format(self.flops_per_sec, 'FLOPS'))
+        print(f'Memory ops        : ' + scientific_format(self.memory_ops, 'memory ops'))
+        print(f'Memory clk        : ' + scientific_format(self.memory_clock_ns*1.0e-9, 'sec'))
+        print(f'Data Size read    : ' + scientific_format(self.read_data, 'Bytes'))
+        print(f'Data Size written : ' + scientific_format(self.write_data, 'Bytes'))
+        print(f'Memory ops        : ' + scientific_format(self.memops_per_sec, 'MemoryOps/sec'))
+        print(f'Memory Read       : ' + scientific_format(self.memory_read_bw, 'Bytes/sec'))
+        print(f'Memory Write      : ' + scientific_format(self.memory_write_bw, 'Bytes/sec'))
 

@@ -56,7 +56,7 @@ def randomize_spm(nr_samples: int, process_node: str):
              'category': [category],
              'core_clock_ghz': [processor_clock_ghz],
              'memory_clock_ghz': [memory_clock_ghz],
-             'performance': [spm_metrics.TIPS],
+             'performance': [spm_metrics.instr_per_sec],
              'energy': [spm_metrics.occurrence_energy('total')* 1.0e-6]}  # renormalize pJ to microJ
         )
         df = pd.concat([df,new_row], ignore_index=True)

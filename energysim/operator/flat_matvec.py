@@ -19,7 +19,7 @@ def flat_matvec_spm(rows, cols, attributes: 'StoredProgramMachineEnergy', config
 
     # instructions flow through the fetch/decode/dispatch part of the pipeline
     # nr of instructions per multiply-add is roughly 13
-    nr_of_instructions: int = fmas * 13
+    nr_of_instructions: int = fmas * 6
     spm_metrics.record('instruction', nr_of_instructions, attributes.instruction)
 
     # we need to read two inputs for each fma,
@@ -32,12 +32,16 @@ def flat_matvec_spm(rows, cols, attributes: 'StoredProgramMachineEnergy', config
     spm_metrics.record('register_write', register_write, attributes.register_write)
 
     # flat mv assumes we are streaming to the cache without reuse
-    cache_line_size = 32  # bytes
+    cache_line_size = config.cache_line_size  # bytes
+    memory_burst_size = config.memory_burst_size # bytes
     matrix_elements = rows * cols
     vector_elements = cols
     total_elements = matrix_elements + vector_elements
-    matrix_cache_lines: int = math.ceil(matrix_elements / cache_line_size)
-    vector_cache_lines: int = math.ceil(vector_elements / cache_line_size)
+    matrix_data_structure_size = matrix_elements * config.word_size
+    vector_data_structure_size = vector_elements * config.word_size
+    total_data_structure_size = total_elements * config.word_size
+    matrix_cache_lines: int = math.ceil(matrix_data_structure_size / cache_line_size)
+    vector_cache_lines: int = math.ceil(vector_data_structure_size / cache_line_size)
     total_cache_lines_in: int = matrix_cache_lines + vector_cache_lines
     total_cache_lines_out: int = vector_cache_lines
     total_cache_lines: int = (total_cache_lines_in + total_cache_lines_out)
@@ -75,17 +79,30 @@ def flat_matvec_spm(rows, cols, attributes: 'StoredProgramMachineEnergy', config
 
     # how long would it take to move the total number of data from and to the memory
     # a 64bit DDR DIMM needs 4 clocks to move a cacheline
-    total_latency = total_cache_lines * 4 * config.memory_cycle_ns
+    memory_ops = total_cache_lines
+    total_elapsed_time_in_sec = memory_ops * 4 * config.memory_cycle_ns * 1.0e-9
 
     # instruction throughput yielded
-    gips = spm_metrics.events['instruction'] / total_latency
-    gops = spm_metrics.events['execute'] / total_latency
-    memory_gops = total_cache_lines / total_latency
+    instr_per_sec = spm_metrics.events['instruction'] / total_elapsed_time_in_sec
+    flops_per_sec = spm_metrics.events['execute'] / total_elapsed_time_in_sec
+    memory_ops_per_second = total_cache_lines / total_elapsed_time_in_sec
 
-    spm_metrics.TIPS = gips / 1000.0
-    spm_metrics.TOPS = gops / 1000.0
-    spm_metrics.MemGOPS = memory_gops
+    spm_metrics.elapsed_time = total_elapsed_time_in_sec
+    spm_metrics.instr_per_sec = instr_per_sec
+    spm_metrics.flops_per_sec = flops_per_sec
+    spm_metrics.memory_ops = memory_ops
+    spm_metrics.memory_clock_ns = config.memory_cycle_ns
+    spm_metrics.read_data = total_cache_lines_in * cache_line_size
+    spm_metrics.write_data = total_cache_lines_out * cache_line_size
+    spm_metrics.memory_read_bw = spm_metrics.read_data / total_elapsed_time_in_sec
+    spm_metrics.memory_write_bw = spm_metrics.write_data / total_elapsed_time_in_sec
+    spm_metrics.memops_per_sec = memory_ops_per_second
 
+    # copy the machine attributes into the metrics data structure
+    spm_metrics.core_clock_ghz = config.processor_clock
+    spm_metrics.memory_clock_ghz = config.memory_clock
+    spm_metrics.cache_line_size = cache_line_size
+    spm_metrics.memory_burst = memory_burst_size
     return spm_metrics
 
 
@@ -120,6 +137,9 @@ def flat_matvec_gpu(rows, cols, attributes: 'GraphicsProcessingUnitEnergy', conf
     matrix_elements = rows * cols
     vector_elements = cols
     total_elements = matrix_elements + vector_elements
+    matrix_data_structure_size = matrix_elements * config.word_size
+    vector_data_structure_size = vector_elements * config.word_size
+    total_data_structure_size = total_elements * config.word_size
 
     # a decoded instruction is sent to all the ALUs via a Warp (NVIDIA) or Wavefront (AMD) scheduler
     # this is an energetic event and needs to be tracked
@@ -169,16 +189,32 @@ def flat_matvec_gpu(rows, cols, attributes: 'GraphicsProcessingUnitEnergy', conf
 
     # how long would it take to move the total number of data from and to the memory
     # a 64bit DDR DIMM needs 4 clocks to move a cacheline
-    total_memory_bursts = total_memory_read_bursts + total_memory_read_bursts
-    total_latency = total_memory_bursts * 4 * config.memory_cycle_ns
+    total_memory_ops = total_memory_read_bursts + total_memory_read_bursts
+    total_elapsed_time_in_sec = total_memory_ops * 4 * config.memory_cycle_ns * 1.0e-9
 
     # instruction throughput yielded
-    gips = gpu_metrics.events['instruction'] / total_latency
-    gops = gpu_metrics.events['execute'] / total_latency
-    memory_gops = total_memory_bursts / total_latency
+    instr_per_sec = gpu_metrics.events['instruction'] / total_elapsed_time_in_sec
+    flops_per_sec = gpu_metrics.events['execute'] / total_elapsed_time_in_sec
+    memory_ops_per_second = total_memory_ops / total_elapsed_time_in_sec
 
-    gpu_metrics.TIPS = gips / 1000.0
-    gpu_metrics.TOPS = gops / 1000.0
-    gpu_metrics.MemGOPS = memory_gops
+    gpu_metrics.elapsed_time = total_elapsed_time_in_sec
+    gpu_metrics.instr_per_sec = instr_per_sec
+    gpu_metrics.flops_per_sec = flops_per_sec
+    gpu_metrics.memory_ops = total_memory_ops
+    gpu_metrics.memory_clock_ns = config.memory_cycle_ns
+    gpu_metrics.read_data = matrix_data_structure_size
+    gpu_metrics.write_data = vector_data_structure_size
+    gpu_metrics.memory_read_bw = matrix_data_structure_size / total_elapsed_time_in_sec
+    gpu_metrics.memory_write_bw = vector_data_structure_size / total_elapsed_time_in_sec
+    gpu_metrics.memops_per_sec = memory_ops_per_second
+
+    # copy the machine attributes into the metrics data structure
+    gpu_metrics.core_clock_ghz = config.core_clock
+    gpu_metrics.memory_clock_ghz = config.memory_clock
+    gpu_metrics.word_size = config.word_size
+    gpu_metrics.cache_line_size = config.cache_line_size
+    gpu_metrics.memory_burst = config.memory_burst_size
+    gpu_metrics.memory_channels = config.memory_channels
+    gpu_metrics.channel_width = config.channel_width
 
     return gpu_metrics

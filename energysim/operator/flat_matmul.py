@@ -81,8 +81,8 @@ def flat_matmul_spm(M, N, K, attributes: 'StoredProgramMachineEnergy', config: '
     bandwidth = memory_clock * 8 * 2
     throughput = total_cache_lines_in * config.cache_line_size / bandwidth
     gops = 1.0 / throughput
-    spm_metrics.TIPS = gops / 100.0
-    spm_metrics.TOPS = gops / 1000.0
-    spm_metrics.MemGOPS = gops
+    spm_metrics.instr_per_sec = gops / 100.0
+    spm_metrics.flops_per_sec = gops / 1000.0
+    spm_metrics.memops_per_sec = gops
 
     return spm_metrics
