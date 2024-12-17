@@ -49,7 +49,7 @@ def randomize_spm(nr_samples: int, process_node: str):
         spm_energies = base_sample.generate_randomized_delta(sample_name, proportion, spm_configs[sample])
         spm_metrics = flat_matvec_spm(16, 16, spm_energies, spm_configs[sample])
         #spm_metrics.report()
-        processor_clock_ghz = spm_configs[sample].processor_clock
+        processor_clock_ghz = spm_configs[sample].core_clock
         memory_clock_ghz = spm_configs[sample].memory_clock
         new_row = pd.DataFrame(
             {'sample': [sample_name],

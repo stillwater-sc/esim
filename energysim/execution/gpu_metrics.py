@@ -57,13 +57,17 @@ class GraphicsProcessingUnitMetrics:
         self.elapsed_time: float = 0    # in seconds
         self.instr_per_sec: float = 0   # instructions per second
         self.flops_per_sec: float = 0   # floating point operations per second
-        self.memory_ops: int = 0
+        self.memory_transactions: int = 0
         self.memory_clock_ns: float = 0  # memory clock cycle in nano-seconds
         self.memops_per_sec: float = 0   # memory operations per second
         self.read_data: float = 0 # memory read in MB
         self.write_data: float = 0 # memory written in MB
         self.memory_read_bw: float = 0  # memory read bandwidth in GB/s
         self.memory_write_bw: float = 0  # memory write bandwidth in GB/s
+        # normalized performance
+        self.total_flops: float = 0
+        self.power: float = 0
+        self.flops_per_watt: float = 0
 
     def __repr__(self):
         return f"GraphicsProcessingUnitMetrics(name='{self.name}', ...)"
@@ -162,30 +166,36 @@ class GraphicsProcessingUnitMetrics:
 
         print()
         print(f'Machine Configuration')
-        print(f'Core clock      : {self.core_clock_ghz} GHz')
-        print(f'Memory clock    : {self.memory_clock_ghz} GHz')
-        print(f'Word size       : {self.word_size} bytes')
-        print(f'Cache line size : {self.cache_line_size} bytes')
-        print(f'Memory burst    : {self.memory_burst} bytes')
-        print(f'Memory channels : {self.memory_channels}')
-        print(f'Channel width   : {self.channel_width} bytes')
+        print(f'Core clock          : {self.core_clock_ghz} GHz')
+        print(f'Memory clock        : {self.memory_clock_ghz} GHz')
+        print(f'Word size           : {self.word_size} bytes')
+        print(f'Cache line size     : {self.cache_line_size} bytes')
+        print(f'Memory burst        : {self.memory_burst} bytes')
+        print(f'Memory channels     : {self.memory_channels}')
+        print(f'Channel width       : {self.channel_width} bytes')
 
         print()
         print(f'Kernel Dispatch Configuration')
-        print(f'Threads per block : {self.threads_per_block}')
-        print(f'Blocks per grid   : {self.blocks_per_grid}')
+        print(f'Threads per block   : {self.threads_per_block}')
+        print(f'Blocks per grid     : {self.blocks_per_grid}')
 
         print()
         print()
         print(f'Performance summary')
-        print(f'Elapsed time      : ' + scientific_format(self.elapsed_time, 'sec'))
-        print(f'IPS               : ' + scientific_format(self.instr_per_sec, 'IPS'))
-        print(f'FLOPS             : ' + scientific_format(self.flops_per_sec, 'FLOPS'))
-        print(f'Memory ops        : ' + scientific_format(self.memory_ops, 'memory ops'))
-        print(f'Memory clk        : ' + scientific_format(self.memory_clock_ns*1.0e-9, 'sec'))
-        print(f'Data Size read    : ' + scientific_format(self.read_data, 'Bytes'))
-        print(f'Data Size written : ' + scientific_format(self.write_data, 'Bytes'))
-        print(f'Memory ops        : ' + scientific_format(self.memops_per_sec, 'MemoryOps/sec'))
-        print(f'Memory Read       : ' + scientific_format(self.memory_read_bw, 'Bytes/sec'))
-        print(f'Memory Write      : ' + scientific_format(self.memory_write_bw, 'Bytes/sec'))
+        print(f'Elapsed time        : ' + scientific_format(self.elapsed_time, 'sec'))
+        print(f'IPS                 : ' + scientific_format(self.instr_per_sec, 'IPS/sec'))
+        print(f'FLOPS               : ' + scientific_format(self.flops_per_sec, 'FLOPS/sec'))
+        print(f'Memory Transactions : ' + scientific_format(self.memory_transactions, 'Memory Transactions'))
+        print(f'Memory clk          : ' + scientific_format(self.memory_clock_ns*1.0e-9, 'sec'))
+        print(f'Data Size read      : ' + scientific_format(self.read_data, 'Bytes'))
+        print(f'Data Size written   : ' + scientific_format(self.write_data, 'Bytes'))
+        print(f'Memory Throughput   : ' + scientific_format(self.memops_per_sec, 'MemT/sec'))
+        print(f'Memory Read         : ' + scientific_format(self.memory_read_bw, 'Bytes/sec'))
+        print(f'Memory Write        : ' + scientific_format(self.memory_write_bw, 'Bytes/sec'))
+
+        print()
+        print(f'Normalized performance')
+        print(f'Total FLOPS         : ' + scientific_format(self.total_flops, "FLOPS"))
+        print(f'Power               : ' + scientific_format(self.power, "Watt"))
+        print(f'FLOPS/Watt          : ' + scientific_format(self.flops_per_watt, "FLOPS/Watt"))
 

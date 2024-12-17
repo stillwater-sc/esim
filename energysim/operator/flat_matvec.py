@@ -1,10 +1,83 @@
 import math
 
 from energysim.database.spm_energy import StoredProgramMachineEnergy
+from energysim.execution.exu_metrics import ExecutionUnitMetrics
 from energysim.execution.gpu_metrics import GraphicsProcessingUnitMetrics
 from energysim.execution.spm_metrics import StoredProgramMachineMetrics
+from energysim.models.exu_configuration import ExecutionUnitConfiguration
 from energysim.models.spm_configuration import StoredProgramMachineConfiguration
 
+# flat matrix-vector operator on a raw Execution Unit
+def flat_matvec_exu(rows, cols, attributes: 'ExecutionUnitEnergy', config: 'ExecutionUnitConfiguration') \
+        -> 'ExecutionUnitMetrics':
+    # enumerate all the energy consuming transactions for a matvec on an SPM
+    exu_metrics = ExecutionUnitMetrics("Flat MV " + str(rows) + " x " + str(cols) + " EXU")
+
+    # nr of multiply-add operations
+    fmas: int = rows * cols
+    exu_metrics.record('agu', 3*fmas, attributes.agu)   # need to generate addresses for 2 input operands and 1 output operand
+    exu_metrics.record('alu', fmas, attributes.alu)     # loop control iteration variables for double loop matvec
+    exu_metrics.record('fpu', fmas, attributes.fpu)     # actual number of FMAs of the workload
+    exu_metrics.record('sfu', 0, attributes.sfu) # no SFU operations for matvec
+
+    # we need to read two inputs for each fma,
+    # and one read for writing the result back to memory
+    reg_read = fmas * 3
+    exu_metrics.record('reg_read', reg_read, attributes.reg_read)
+    # we write the output of the MADD to the register file
+    # and we need to write all the inputs into the register file too
+    reg_write = fmas * 3
+    exu_metrics.record('reg_write', reg_write, attributes.reg_write)
+
+    # consolidate sets
+    exu_metrics.consolidate('compute', ['agu', 'alu', 'fpu', 'sfu'])
+    exu_metrics.consolidate('data', ['reg_read', 'reg_write'])
+    exu_metrics.consolidate('total', ['compute', 'data'])
+
+    # calculate performance metrics
+
+    # instruction throughput yielded
+    total_iops = exu_metrics.events['agu'] + exu_metrics.events['alu']
+    total_flops = exu_metrics.events['fpu'] + exu_metrics.events['sfu']
+    total_ops = total_iops + total_flops
+    exu_metrics.total_ops = total_ops
+    exu_metrics.total_iops = total_iops
+    exu_metrics.total_flops = total_flops
+    
+    total_elapsed_time_in_sec = total_ops * config.clock_cycle_ns * 1.0e-9
+    exu_metrics.elapsed_time = total_elapsed_time_in_sec
+
+    ops_per_sec = total_ops / total_elapsed_time_in_sec
+    iops_per_sec = total_iops / total_elapsed_time_in_sec
+    flops_per_sec = total_flops / total_elapsed_time_in_sec
+    exu_metrics.ops_per_sec = ops_per_sec
+    exu_metrics.iops_per_sec = iops_per_sec
+    exu_metrics.flops_per_sec = flops_per_sec
+
+    exu_metrics.read_data = reg_read * config.word_size
+    exu_metrics.write_data = reg_write * config.word_size
+
+    # copy the machine attributes into the metrics data structure
+    exu_metrics.core_clock_ghz = config.core_clock
+    exu_metrics.word_size = config.word_size
+    exu_metrics.agus = config.agus
+    exu_metrics.alus = config.alus
+    exu_metrics.fpus = config.fpus
+    exu_metrics.sfus = config.sfus
+
+    # normalized performance
+    # Watt = J/s
+    # ops/Watt = ops/ (J/s)
+    total_energy_in_pJoules = exu_metrics.energy['total']
+    total_energy = total_energy_in_pJoules * 1.0e-12
+    power = total_energy / total_elapsed_time_in_sec
+    exu_metrics.total_flops = total_flops
+    exu_metrics.power = power
+    exu_metrics.ops_per_watt = total_ops / power
+    exu_metrics.iops_per_watt = total_iops / power
+    exu_metrics.flops_per_watt = total_flops / power
+
+    return exu_metrics
 
 # flat matrix-vector operator on a Stored Program Machine
 def flat_matvec_spm(rows, cols, attributes: 'StoredProgramMachineEnergy', config: 'StoredProgramMachineConfiguration') \
@@ -79,18 +152,20 @@ def flat_matvec_spm(rows, cols, attributes: 'StoredProgramMachineEnergy', config
 
     # how long would it take to move the total number of data from and to the memory
     # a 64bit DDR DIMM needs 4 clocks to move a cacheline
-    memory_ops = total_cache_lines
-    total_elapsed_time_in_sec = memory_ops * 4 * config.memory_cycle_ns * 1.0e-9
+    memory_transactions = total_cache_lines
+    total_elapsed_time_in_sec = memory_transactions * 4 * config.memory_cycle_ns * 1.0e-9
 
     # instruction throughput yielded
-    instr_per_sec = spm_metrics.events['instruction'] / total_elapsed_time_in_sec
-    flops_per_sec = spm_metrics.events['execute'] / total_elapsed_time_in_sec
+    total_instructions = spm_metrics.events['instruction']
+    instr_per_sec = total_instructions / total_elapsed_time_in_sec
+    total_flops = spm_metrics.events['execute']
+    flops_per_sec = total_flops / total_elapsed_time_in_sec
     memory_ops_per_second = total_cache_lines / total_elapsed_time_in_sec
 
     spm_metrics.elapsed_time = total_elapsed_time_in_sec
     spm_metrics.instr_per_sec = instr_per_sec
     spm_metrics.flops_per_sec = flops_per_sec
-    spm_metrics.memory_ops = memory_ops
+    spm_metrics.memory_transactions = memory_transactions
     spm_metrics.memory_clock_ns = config.memory_cycle_ns
     spm_metrics.read_data = total_cache_lines_in * cache_line_size
     spm_metrics.write_data = total_cache_lines_out * cache_line_size
@@ -99,10 +174,24 @@ def flat_matvec_spm(rows, cols, attributes: 'StoredProgramMachineEnergy', config
     spm_metrics.memops_per_sec = memory_ops_per_second
 
     # copy the machine attributes into the metrics data structure
-    spm_metrics.core_clock_ghz = config.processor_clock
+    spm_metrics.core_clock_ghz = config.core_clock
     spm_metrics.memory_clock_ghz = config.memory_clock
-    spm_metrics.cache_line_size = cache_line_size
-    spm_metrics.memory_burst = memory_burst_size
+    spm_metrics.word_size = config.word_size
+    spm_metrics.cache_line_size = config.cache_line_size
+    spm_metrics.memory_burst = config.memory_burst_size
+    spm_metrics.memory_channels = config.memory_channels
+    spm_metrics.channel_width = config.channel_width
+
+    # normalized performance
+    # Watt = J/s
+    # gops/Watt = gops/ (J/s)
+    total_energy_in_pJoules = spm_metrics.energy['total']
+    total_energy = total_energy_in_pJoules * 1.0e-12
+    power = total_energy / total_elapsed_time_in_sec
+    spm_metrics.total_flops = total_flops
+    spm_metrics.power = power
+    spm_metrics.flops_per_watt = total_flops / power
+
     return spm_metrics
 
 
@@ -125,11 +214,11 @@ def flat_matvec_gpu(rows, cols, attributes: 'GraphicsProcessingUnitEnergy', conf
     # we need to read two inputs for each fma,
     # and one read for writing the result back to memory
     register_read = fmas * 3
-    gpu_metrics.record('register_read', register_read, attributes.register_read)
+    gpu_metrics.record('register_read', register_read, attributes.reg_read)
     # we write the output of the fma to the register file
     # and we need to write all the inputs into the register file too
     register_write = fmas * 3
-    gpu_metrics.record('register_write', register_write, attributes.register_write)
+    gpu_metrics.record('register_write', register_write, attributes.reg_write)
 
     # flat mv assumes we are streaming to the cache without reuse
     threads_per_block = config.threads_per_block
@@ -189,18 +278,20 @@ def flat_matvec_gpu(rows, cols, attributes: 'GraphicsProcessingUnitEnergy', conf
 
     # how long would it take to move the total number of data from and to the memory
     # a 64bit DDR DIMM needs 4 clocks to move a cacheline
-    total_memory_ops = total_memory_read_bursts + total_memory_read_bursts
-    total_elapsed_time_in_sec = total_memory_ops * 4 * config.memory_cycle_ns * 1.0e-9
+    memory_transactions = total_memory_read_bursts + total_memory_read_bursts
+    total_elapsed_time_in_sec = memory_transactions * 4 * config.memory_cycle_ns * 1.0e-9
 
     # instruction throughput yielded
-    instr_per_sec = gpu_metrics.events['instruction'] / total_elapsed_time_in_sec
-    flops_per_sec = gpu_metrics.events['execute'] / total_elapsed_time_in_sec
-    memory_ops_per_second = total_memory_ops / total_elapsed_time_in_sec
+    total_instructions = gpu_metrics.events['instruction']
+    instr_per_sec = total_instructions / total_elapsed_time_in_sec
+    total_flops = gpu_metrics.events['execute']
+    flops_per_sec = total_flops / total_elapsed_time_in_sec
+    memory_ops_per_second = memory_transactions / total_elapsed_time_in_sec
 
     gpu_metrics.elapsed_time = total_elapsed_time_in_sec
     gpu_metrics.instr_per_sec = instr_per_sec
     gpu_metrics.flops_per_sec = flops_per_sec
-    gpu_metrics.memory_ops = total_memory_ops
+    gpu_metrics.memory_transactions = memory_transactions
     gpu_metrics.memory_clock_ns = config.memory_cycle_ns
     gpu_metrics.read_data = matrix_data_structure_size
     gpu_metrics.write_data = vector_data_structure_size
@@ -216,5 +307,15 @@ def flat_matvec_gpu(rows, cols, attributes: 'GraphicsProcessingUnitEnergy', conf
     gpu_metrics.memory_burst = config.memory_burst_size
     gpu_metrics.memory_channels = config.memory_channels
     gpu_metrics.channel_width = config.channel_width
+
+    # normalized performance
+    # Watt = J/s
+    # flops/Watt = flops/ (J/s)
+    total_energy_in_pJoules = gpu_metrics.energy['total']
+    total_energy = total_energy_in_pJoules * 1.0e-12
+    power =  total_energy / total_elapsed_time_in_sec
+    gpu_metrics.total_flops = total_flops
+    gpu_metrics.power = power
+    gpu_metrics.flops_per_watt = total_flops / power
 
     return gpu_metrics

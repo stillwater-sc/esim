@@ -1,7 +1,5 @@
 import pandas as pd
 
-from pyparsing import Empty
-
 from energysim.models.design_category import DesignCategory
 from energysim.models.gpu_configuration import GraphicsProcessingUnitConfiguration
 from energysim.utils.randomizer import randomizer
@@ -9,7 +7,6 @@ from energysim.utils.randomizer import randomizer
 
 # Characteristic event energies of a Graphics Processing Unit
 # organized as a Single Instruction Multiple Thread (SIMT) machine
-#
 class GraphicsProcessingUnitEnergy:
     def __init__(self, identifier: str):
         self.identifier = identifier
@@ -60,10 +57,6 @@ class GraphicsProcessingUnitEnergy:
         ID: {self.identifier}
 
         Energy Metrics (pJ):
-        - Total        {self.total}
-        -  compute:       {self.compute}
-        -  data movement: {self.data_movement}
-
         - Compute
         - Thread:      {self.thread}
         -  instruction: {self.instruction}
@@ -144,13 +137,6 @@ class GraphicsProcessingUnitEnergy:
         new_sample.gmem_read = randomizer(self.gmem_read, lowerbound, upperbound)
         new_sample.gmem_write = randomizer(self.gmem_write, lowerbound, upperbound)
 
-        # consolidated energies
-        new_sample.compute = self.thread + self.execute + self.register_read + self.register_write
-        l1 = self.l1_read + self.l1_write
-        smem = self.smem_read + self.smem_write
-        gmem = self.gmem_read + self.gmem_write
-        new_sample.data_movement = l1 + smem + gmem
-        new_sample.total = self.compute + self.data_movement
         return new_sample
 
 
@@ -181,7 +167,7 @@ class GraphicsProcessingUnitEnergyDatabase:
     # on a SPM architecture
     def lookupEnergySet(self, node: str, cache_line_size_in_bytes: int) -> GraphicsProcessingUnitEnergy:
         if self.data is None:
-            raise Empty
+            raise ValueError(f'Energy Database not loaded: did you for get to call load_data(csv-file-with-energy-event-data')
 
         # query the database
         df = self.data.copy()  # do we need to copy it? are all the operators on the db read-only?

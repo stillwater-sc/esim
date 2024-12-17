@@ -1,7 +1,5 @@
 import pandas as pd
 
-from pyparsing import Empty
-
 from energysim.models.spm_configuration import StoredProgramMachineConfiguration, DesignCategory
 from energysim.utils.randomizer import randomizer
 
@@ -55,11 +53,7 @@ class StoredProgramMachineEnergy:
         return f"""
         Node: {self.identifier}
 
-        Energy Metrics (pJ):
-        - Total        {self.total}
-        -  compute:       {self.compute}
-        -  data movement: {self.data_movement}
-        
+        Energy Metrics (pJ):       
         - Compute
         - Instruction: {self.instruction}
         -  fetch:       {self.fetch}
@@ -143,14 +137,6 @@ class StoredProgramMachineEnergy:
         new_sample.dram_read = randomizer(self.dram_read, lowerbound, upperbound)
         new_sample.dram_write = randomizer(self.dram_write, lowerbound, upperbound)
 
-        # consolidated energies
-        new_sample.compute = self.instruction + self.execute + self.register_read + self.register_write
-        l1 = self.l1_read + self.l1_write
-        l2 = self.l2_read + self.l2_write
-        l3 = self.l3_read + self.l3_write
-        memory = self.dram_read + self.dram_write
-        new_sample.data_movement = l1 + l2 + l3 + memory
-        new_sample.total = self.compute + self.data_movement
         return new_sample
 
 
@@ -181,7 +167,7 @@ class StoredProgramMachineEnergyDatabase:
     # on a SPM architecture
     def lookupEnergySet(self, node: str, cache_line_size_in_bytes: int) -> StoredProgramMachineEnergy:
         if self.data is None:
-            raise Empty
+            raise ValueError(f'Energy Database not loaded: did you for get to call load_data(csv-file-with-energy-event-data')
 
         # query the database
         df = self.data.copy()
