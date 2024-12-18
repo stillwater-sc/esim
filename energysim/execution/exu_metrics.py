@@ -50,6 +50,10 @@ class ExecutionUnitMetrics:
         self.total_flops: float = 0
         self.total_flops_energy: float = 0   # FPUs + SFUs energy
         self.flops_per_sec: float = 0
+        # special function unit floating-point operations
+        self.total_sfops: float = 0
+        self.total_sfops_energy: float = 0   # FPUs + SFUs energy
+        self.sfops_per_sec: float = 0
 
         self.power: float = 0
         self.ops_per_watt: float = 0  # all operations
@@ -148,7 +152,9 @@ class ExecutionUnitMetrics:
         print(f'Performance summary')
         print(f'Elapsed time        : ' + scientific_format(self.elapsed_time, 'sec'))
         print(f'OPS                 : ' + scientific_format(self.ops_per_sec, 'OPS/sec'))
+        print(f'IOPS                : ' + scientific_format(self.iops_per_sec, 'IOPS/sec'))
         print(f'FLOPS               : ' + scientific_format(self.flops_per_sec, 'FLOPS/sec'))
+        print(f'SFOPS               : ' + scientific_format(self.sfops_per_sec, 'SFOPS/sec'))
         print(f'Data Size read      : ' + scientific_format(self.read_data, 'Bytes'))
         print(f'Data Size written   : ' + scientific_format(self.write_data, 'Bytes'))
 
@@ -161,4 +167,6 @@ class ExecutionUnitMetrics:
         print(f'IOPS/Watt           : ' + scientific_format(self.iops_per_watt, "IOPS/Watt"))
         print(f'Total FLOPS         : ' + scientific_format(self.total_flops, "FLOPS"))
         print(f'FLOPS/Watt          : ' + scientific_format(self.flops_per_watt, "FLOPS/Watt"))
+        print(f'Total SFOPS         : ' + scientific_format(self.total_sfops, "SFOPS"))
+        print(f'SFOPS/Watt          : ' + scientific_format(self.sfops_per_watt, "SFOPS/Watt"))
 

@@ -3,15 +3,12 @@ from energysim.models.design_category import DesignCategory
 from energysim.models.exu_configuration import ExecutionUnitConfiguration
 from energysim.operator.flat_matvec import flat_matvec_exu
 
-if __name__ == '__main__':
+def fireball(core_clock_in_ghz: float, word_size_in_bytes: int, rows: int, cols: int) -> None:
     db = ExecutionUnitEnergyDatabase()
     full = db.load_data('../../data/exu_energy.csv')
-    exu_energies = db.lookupEnergySet('n14t')
+    exu_energies = db.lookupEnergySet('n14t', word_size_in_bytes)
     print(exu_energies)
-    rows = 1024*1024
-    cols = 1024
-    core_clock = 2.5 # GHz
-    word_size = 4 # bytes
+
     agus = alus = fpus = sfus = 1
     exu_config = ExecutionUnitConfiguration(
         DesignCategory.HighVolume,
@@ -24,4 +21,11 @@ if __name__ == '__main__':
     )
     exu_metrics = flat_matvec_exu(rows, cols, exu_energies, exu_config)
     exu_metrics.report()
+
+if __name__ == '__main__':
+    core_clock = 3.0 # GHz
+    word_size = 1 # bytes
+    rows = 1 # 1024*1024
+    cols = 1 # 1024
+    fireball(core_clock, word_size, rows, cols)
 

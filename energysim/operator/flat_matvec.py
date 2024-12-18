@@ -16,7 +16,7 @@ def flat_matvec_exu(rows, cols, attributes: 'ExecutionUnitEnergy', config: 'Exec
     # nr of multiply-add operations
     fmas: int = rows * cols
     exu_metrics.record('agu', 3*fmas, attributes.agu)   # need to generate addresses for 2 input operands and 1 output operand
-    exu_metrics.record('alu', fmas, attributes.alu)     # loop control iteration variables for double loop matvec
+    exu_metrics.record('alu', rows*cols + rows, attributes.alu)     # loop control iteration variables for double loop matvec
     exu_metrics.record('fpu', fmas, attributes.fpu)     # actual number of FMAs of the workload
     exu_metrics.record('sfu', 0, attributes.sfu) # no SFU operations for matvec
 
@@ -24,7 +24,7 @@ def flat_matvec_exu(rows, cols, attributes: 'ExecutionUnitEnergy', config: 'Exec
     # and one read for writing the result back to memory
     reg_read = fmas * 3
     exu_metrics.record('reg_read', reg_read, attributes.reg_read)
-    # we write the output of the MADD to the register file
+    # we write the output of the fma to the register file
     # and we need to write all the inputs into the register file too
     reg_write = fmas * 3
     exu_metrics.record('reg_write', reg_write, attributes.reg_write)
@@ -36,23 +36,28 @@ def flat_matvec_exu(rows, cols, attributes: 'ExecutionUnitEnergy', config: 'Exec
 
     # calculate performance metrics
 
-    # instruction throughput yielded
+    # instruction throughput
+
     total_iops = exu_metrics.events['agu'] + exu_metrics.events['alu']
-    total_flops = exu_metrics.events['fpu'] + exu_metrics.events['sfu']
-    total_ops = total_iops + total_flops
-    exu_metrics.total_ops = total_ops
+    total_flops = exu_metrics.events['fpu']
+    total_sfops = exu_metrics.events['sfu']
+    total_ops = total_iops + total_flops + total_sfops
     exu_metrics.total_iops = total_iops
     exu_metrics.total_flops = total_flops
-
-    total_elapsed_time_in_sec = total_ops * config.clock_cycle_ns * 1.0e-9
+    exu_metrics.total_sfops = total_sfops
+    exu_metrics.total_ops = total_ops
+    # assume that the pipeline has enough AGU and ALU throughput to saturate the FPU
+    total_elapsed_time_in_sec = total_flops * config.clock_cycle_ns * 1.0e-9
     exu_metrics.elapsed_time = total_elapsed_time_in_sec
 
     ops_per_sec = total_ops / total_elapsed_time_in_sec
     iops_per_sec = total_iops / total_elapsed_time_in_sec
     flops_per_sec = total_flops / total_elapsed_time_in_sec
+    sfops_per_sec = total_sfops / total_elapsed_time_in_sec
     exu_metrics.ops_per_sec = ops_per_sec
     exu_metrics.iops_per_sec = iops_per_sec
     exu_metrics.flops_per_sec = flops_per_sec
+    exu_metrics.sfops_per_sec = sfops_per_sec
 
     exu_metrics.read_data = reg_read * config.word_size
     exu_metrics.write_data = reg_write * config.word_size
@@ -71,11 +76,11 @@ def flat_matvec_exu(rows, cols, attributes: 'ExecutionUnitEnergy', config: 'Exec
     total_energy_in_pJoules = exu_metrics.energy['total']
     total_energy = total_energy_in_pJoules * 1.0e-12
     power = total_energy / total_elapsed_time_in_sec
-    exu_metrics.total_flops = total_flops
     exu_metrics.power = power
-    exu_metrics.ops_per_watt = total_ops / power
-    exu_metrics.iops_per_watt = total_iops / power
-    exu_metrics.flops_per_watt = total_flops / power
+    exu_metrics.ops_per_watt = total_ops / total_energy
+    exu_metrics.iops_per_watt = total_iops / total_energy
+    exu_metrics.flops_per_watt = total_flops / total_energy
+    exu_metrics.sfops_per_watt = total_sfops / total_energy
 
     return exu_metrics
 

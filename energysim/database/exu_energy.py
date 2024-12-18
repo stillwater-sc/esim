@@ -73,7 +73,7 @@ class ExecutionUnitEnergyDatabase:
     # Different operator models will use this configuration to calculate
     # energy consumption and performance of the operator when executing
     # on a SPM architecture
-    def lookupEnergySet(self, node: str) -> ExecutionUnitEnergy:
+    def lookupEnergySet(self, node: str, word_size_in_bytes: int) -> ExecutionUnitEnergy:
         if self.data is None:
             raise ValueError(f'Energy Database not loaded: did you for get to call load_data(csv-file-with-energy-event-data')
 
@@ -91,22 +91,21 @@ class ExecutionUnitEnergyDatabase:
 
         # all energy metrics in pJ
 
-        # The instruction stream on a GPU is fetch and decode once, and
-        # dispatch to Arithmetic Instruction Units inside the Streaming Multiprocessors.
-        # The execute stage inside the Streaming Processor will read from the local thread register file.
-        agu_energy = process_node['agu'].values[0]
-        alu_energy = process_node['alu'].values[0]
-        fpu_energy = process_node['fpu'].values[0]
-        sfu_energy = process_node['sfu'].values[0]
-        exu_energies.agu = agu_energy
-        exu_energies.alu = alu_energy
-        exu_energies.fpu = fpu_energy
-        exu_energies.sfu = sfu_energy
+        # energies for compute units are in 8-bit building blocks
+        # we need to scale them to the word size of interest
+        agu_energy = process_node['agu8'].values[0]
+        alu_energy = process_node['alu8'].values[0]
+        fpu_energy = process_node['fpu8'].values[0]
+        sfu_energy = process_node['sfu8'].values[0]
+        exu_energies.agu = agu_energy * word_size_in_bytes
+        exu_energies.alu = alu_energy * word_size_in_bytes
+        exu_energies.fpu = fpu_energy * word_size_in_bytes
+        exu_energies.sfu = sfu_energy * word_size_in_bytes
 
-        word_size_in_bits = 32
         # register events are per bit
-        reg_read = process_node['reg_read'].values[0]
-        reg_write = process_node['reg_write'].values[0]
+        word_size_in_bits = word_size_in_bytes * 8
+        reg_read = process_node['regr'].values[0]
+        reg_write = process_node['regw'].values[0]
         exu_energies.reg_read = reg_read * word_size_in_bits
         exu_energies.reg_write = reg_write * word_size_in_bits
 
