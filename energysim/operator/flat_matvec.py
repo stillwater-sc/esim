@@ -43,7 +43,7 @@ def flat_matvec_exu(rows, cols, attributes: 'ExecutionUnitEnergy', config: 'Exec
     exu_metrics.total_ops = total_ops
     exu_metrics.total_iops = total_iops
     exu_metrics.total_flops = total_flops
-    
+
     total_elapsed_time_in_sec = total_ops * config.clock_cycle_ns * 1.0e-9
     exu_metrics.elapsed_time = total_elapsed_time_in_sec
 
