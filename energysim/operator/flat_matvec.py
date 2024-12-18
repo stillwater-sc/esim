@@ -223,6 +223,9 @@ def flat_matvec_gpu(rows, cols, attributes: 'GraphicsProcessingUnitEnergy', conf
     # flat mv assumes we are streaming to the cache without reuse
     threads_per_block = config.threads_per_block
     blocks_per_grid = config.blocks_per_grid
+    gpu_metrics.threads_per_block = threads_per_block
+    gpu_metrics.blocks_per_grid = blocks_per_grid
+
     matrix_elements = rows * cols
     vector_elements = cols
     total_elements = matrix_elements + vector_elements
@@ -235,7 +238,7 @@ def flat_matvec_gpu(rows, cols, attributes: 'GraphicsProcessingUnitEnergy', conf
     # we are assuming a flat matvec kernel that is laid out on a 1D grid where each
     # thread takes care of one element of the result vector
     nr_of_warps: int = math.ceil(rows / 32)
-
+    gpu_metrics.nr_of_warps = nr_of_warps
 
     gpu_metrics.record('l1_read', fmas*2, attributes.l1_read)
     gpu_metrics.record('l1_write', fmas, attributes.l1_write)
@@ -251,7 +254,7 @@ def flat_matvec_gpu(rows, cols, attributes: 'GraphicsProcessingUnitEnergy', conf
     # modeling the efficiency of the memory traffic through an occupancy
     # if we have 100% occupancy, we do not over fetch
     # if we have 75% occupancy, we need to fetch 25% more: (1.0 + (1.0 - occupancy))
-    memory_burst_occupancy: float = 1.0   # each memory burst has 80% valid data
+    memory_burst_occupancy: float = 0.9   # each memory burst has 90% valid data
     overfetch_factor = (1.0 + (1.0 - memory_burst_occupancy))
     total_memory_reads = total_elements * overfetch_factor
     total_memory_read_bursts = math.ceil(total_memory_reads / config.memory_burst_size)
@@ -307,6 +310,8 @@ def flat_matvec_gpu(rows, cols, attributes: 'GraphicsProcessingUnitEnergy', conf
     gpu_metrics.memory_burst = config.memory_burst_size
     gpu_metrics.memory_channels = config.memory_channels
     gpu_metrics.channel_width = config.channel_width
+    # peak memory bandwidth
+    gpu_metrics.max_memory_bw = config.memory_clock * 2 * config.channel_width * config.memory_channels * 2 * 1.0e9
 
     # normalized performance
     # Watt = J/s

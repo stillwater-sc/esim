@@ -27,8 +27,8 @@ class GraphicsProcessingUnitEnergy:
         self.fma32b: float = 0
         self.fdiv32b: float = 0
 
-        self.register_read: float = 0
-        self.register_write: float = 0
+        self.reg_read: float = 0
+        self.reg_write: float = 0
 
         # structural aggregations to support SIMT thread management
         self.warp: float = 0
@@ -62,9 +62,9 @@ class GraphicsProcessingUnitEnergy:
         -  instruction: {self.instruction}
         -   fetch:       {self.fetch}
         -   decode:      {self.decode}
-        - Operand:     {self.register_read + self.register_write}
-        -  Reg read:    {self.register_read}
-        -  Reg write:   {self.register_write}
+        - Operand:     {self.reg_read + self.reg_write}
+        -  Reg read:    {self.reg_read}
+        -  Reg write:   {self.reg_write}
         - Execute:     {self.execute}
         -  add:         {self.add32b}
         -  mul:         {self.mul32b}
@@ -124,8 +124,8 @@ class GraphicsProcessingUnitEnergy:
         new_sample.fdiv32b = randomizer(self.fdiv32b, lowerbound, upperbound)
         new_sample.execute = self.fma32b  # approximate until we have instruction profiles
 
-        new_sample.register_read = randomizer(self.register_read, lowerbound, upperbound)
-        new_sample.register_write = randomizer(self.register_write, lowerbound, upperbound)
+        new_sample.reg_read = randomizer(self.reg_read, lowerbound, upperbound)
+        new_sample.reg_write = randomizer(self.reg_write, lowerbound, upperbound)
 
         # cache event energies
         new_sample.l1_read = randomizer(self.l1_read, lowerbound, upperbound)
@@ -229,8 +229,8 @@ class GraphicsProcessingUnitEnergyDatabase:
         # register events are per bit
         register_read = process_node['reg_read'].values[0]
         register_write = process_node['reg_write'].values[0]
-        gpu_energies.register_read = register_read * word_size_in_bits
-        gpu_energies.register_write = register_write * word_size_in_bits
+        gpu_energies.reg_read = register_read * word_size_in_bits
+        gpu_energies.reg_write = register_write * word_size_in_bits
 
         # l1 events are per bit
         l1_read_per_bit = process_node['l1_read'].values[0]

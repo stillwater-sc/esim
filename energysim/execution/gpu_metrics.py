@@ -50,9 +50,11 @@ class GraphicsProcessingUnitMetrics:
         self.memory_burst: int = 0
         self.memory_channels: int = 0
         self.channel_width: int = 0
+        self.max_memory_bw: float = 0
         # kernel attributes
         self.threads_per_block: int = 0
         self.blocks_per_grid: int = 0
+        self.nr_of_warps: int = 0
         # performance metrics
         self.elapsed_time: float = 0    # in seconds
         self.instr_per_sec: float = 0   # instructions per second
@@ -173,13 +175,14 @@ class GraphicsProcessingUnitMetrics:
         print(f'Memory burst        : {self.memory_burst} bytes')
         print(f'Memory channels     : {self.memory_channels}')
         print(f'Channel width       : {self.channel_width} bytes')
+        print(f'Max Memory BW       : ' + scientific_format(self.max_memory_bw, "Bytes"))
 
         print()
         print(f'Kernel Dispatch Configuration')
         print(f'Threads per block   : {self.threads_per_block}')
         print(f'Blocks per grid     : {self.blocks_per_grid}')
+        print(f'Total nr of Warps   : {self.nr_of_warps}')
 
-        print()
         print()
         print(f'Performance summary')
         print(f'Elapsed time        : ' + scientific_format(self.elapsed_time, 'sec'))
