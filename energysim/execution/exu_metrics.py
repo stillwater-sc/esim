@@ -40,25 +40,31 @@ class ExecutionUnitMetrics:
         self.write_data: float = 0  # data written in MB
         # normalized performance
         self.total_ops: float = 0
-        self.total_ops_energy: float = 0   # AGUs + ALUs energy
+        self.total_ops_energy: float = 0   # aggregate energy of all units
         self.ops_per_sec: float = 0
-        # integer and address operations
+        # address operations
+        self.total_aops: float = 0
+        self.total_aops_energy: float = 0   # AGUs energy
+        self.aops_per_sec: float = 0
+        # integer operations
         self.total_iops: float = 0
-        self.total_iops_energy: float = 0   # FPUs + SFUs energy
+        self.total_iops_energy: float = 0   # ALUs energy
         self.iops_per_sec: float = 0
         # floating-point operations
         self.total_flops: float = 0
-        self.total_flops_energy: float = 0   # FPUs + SFUs energy
+        self.total_flops_energy: float = 0   # FPUs energy
         self.flops_per_sec: float = 0
         # special function unit floating-point operations
         self.total_sfops: float = 0
-        self.total_sfops_energy: float = 0   # FPUs + SFUs energy
+        self.total_sfops_energy: float = 0   # SFUs energy
         self.sfops_per_sec: float = 0
 
         self.power: float = 0
         self.ops_per_watt: float = 0  # all operations
-        self.iops_per_watt: float = 0  # all integer operations == address and alu
-        self.flops_per_watt: float = 0 # all floating-point operations == fpu and sfu
+        self.aops_per_watt: float = 0  # all address operations
+        self.iops_per_watt: float = 0  # all integer operations
+        self.flops_per_watt: float = 0 # all floating-point operations
+        self.sfops_per_watt: float = 0 # all special function operations
 
     def __repr__(self):
         return f"ExecutionUnitMetrics(name='{self.name}', ...)"
@@ -97,7 +103,7 @@ class ExecutionUnitMetrics:
         occurrence_energy = self.energy.get(key, 0)
         return occurrence_energy
 
-    def report(self):
+    def report(self, header: str):
         agu_events = self.events['agu']
         alu_events = self.events['alu']
         fpu_events = self.events['fpu']
@@ -119,7 +125,7 @@ class ExecutionUnitMetrics:
         # reference
         # to, te = self.gather('total')
         total_energy = compute_energy + data_energy
-
+        print(header)
         print("Name: " + self.name)
         data = [["event", "Occurrences", "pJ", "%"],
                 ["Total", "-", total_energy, 100.0],
@@ -151,22 +157,28 @@ class ExecutionUnitMetrics:
         print()
         print(f'Performance summary')
         print(f'Elapsed time        : ' + scientific_format(self.elapsed_time, 'sec'))
-        print(f'OPS                 : ' + scientific_format(self.ops_per_sec, 'OPS/sec'))
-        print(f'IOPS                : ' + scientific_format(self.iops_per_sec, 'IOPS/sec'))
-        print(f'FLOPS               : ' + scientific_format(self.flops_per_sec, 'FLOPS/sec'))
-        print(f'SFOPS               : ' + scientific_format(self.sfops_per_sec, 'SFOPS/sec'))
+        print(f'Total operations    : ' + scientific_format(self.ops_per_sec, 'ops/sec'))
+        print(f'Total address ops   : ' + scientific_format(self.aops_per_sec, 'aops/sec'))
+        print(f'Total integer ops   : ' + scientific_format(self.iops_per_sec, 'iops/sec'))
+        print(f'Total floating pnt  : ' + scientific_format(self.flops_per_sec, 'flops/sec'))
+        print(f'Total special ops   : ' + scientific_format(self.sfops_per_sec, 'sfops/sec'))
         print(f'Data Size read      : ' + scientific_format(self.read_data, 'Bytes'))
         print(f'Data Size written   : ' + scientific_format(self.write_data, 'Bytes'))
 
         print()
         print(f'Normalized performance')
         print(f'Power               : ' + scientific_format(self.power, "Watt"))
-        print(f'Total OPS           : ' + scientific_format(self.total_ops, "OPS"))
-        print(f'OPS/Watt            : ' + scientific_format(self.ops_per_watt, "OPS/Watt"))
-        print(f'Total IOPS          : ' + scientific_format(self.total_iops, "IOPS"))
-        print(f'IOPS/Watt           : ' + scientific_format(self.iops_per_watt, "IOPS/Watt"))
-        print(f'Total FLOPS         : ' + scientific_format(self.total_flops, "FLOPS"))
-        print(f'FLOPS/Watt          : ' + scientific_format(self.flops_per_watt, "FLOPS/Watt"))
-        print(f'Total SFOPS         : ' + scientific_format(self.total_sfops, "SFOPS"))
-        print(f'SFOPS/Watt          : ' + scientific_format(self.sfops_per_watt, "SFOPS/Watt"))
+        print(f'Total operations    : ' + scientific_format(self.total_ops, "OPS"))
+        print(f'      address ops   : ' + scientific_format(self.total_aops, "aops"))
+        print(f'      integer ops   : ' + scientific_format(self.total_iops, "iops"))
+        print(f'      floating pnt  : ' + scientific_format(self.total_flops, "flops"))
+        print(f'      special ops   : ' + scientific_format(self.total_sfops, "sfops"))
+
+
+        print(f'Aggregate ops/Watt  : ' + scientific_format(self.ops_per_watt,
+                                                    "ops/Watt  <-- overall performance for the execution unit"))
+        print(f'      aops/Watt     : ' + scientific_format(self.aops_per_watt, "aops/Watt"))
+        print(f'      iops/Watt     : ' + scientific_format(self.iops_per_watt, "iops/Watt"))
+        print(f'      flops/Watt    : ' + scientific_format(self.flops_per_watt, "flops/Watt"))
+        print(f'      sfops/Watt    : ' + scientific_format(self.sfops_per_watt, "sfops/Watt"))
 

@@ -104,8 +104,8 @@ class ExecutionUnitEnergyDatabase:
 
         # register events are per bit
         word_size_in_bits = word_size_in_bytes * 8
-        reg_read = process_node['regr'].values[0]
-        reg_write = process_node['regw'].values[0]
+        reg_read = process_node['rreg8'].values[0]
+        reg_write = process_node['wreg8'].values[0]
         exu_energies.reg_read = reg_read * word_size_in_bits
         exu_energies.reg_write = reg_write * word_size_in_bits
 

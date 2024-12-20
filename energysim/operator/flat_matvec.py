@@ -1,6 +1,8 @@
 import math
 
+from energysim.database.dfa_energy import DomainFlowArchitectureEnergy
 from energysim.database.spm_energy import StoredProgramMachineEnergy
+from energysim.execution.dfa_metrics import DomainFlowArchitectureMetrics
 from energysim.execution.exu_metrics import ExecutionUnitMetrics
 from energysim.execution.gpu_metrics import GraphicsProcessingUnitMetrics
 from energysim.execution.spm_metrics import StoredProgramMachineMetrics
@@ -201,29 +203,29 @@ def flat_matvec_spm(rows, cols, attributes: 'StoredProgramMachineEnergy', config
 
 
 # flat matrix-vector operator on an NVIDIA Graphics Processing Unit
-def flat_matvec_gpu(rows, cols, attributes: 'GraphicsProcessingUnitEnergy', config: 'GraphicsProcessingUnitConfiguration') \
+def flat_matvec_gpu(rows, cols, energies: 'GraphicsProcessingUnitEnergy', config: 'GraphicsProcessingUnitConfiguration') \
         -> 'GraphicsProcessingUnitMetrics':
     # enumerate all the energy consuming transactions for a matvec on a GPU
     gpu_metrics = GraphicsProcessingUnitMetrics("Flat MV " + str(rows) + " x " + str(cols) + " GPU")
 
     # nr of multiply-add operations
     fmas: int = rows * cols
-    gpu_metrics.record('fma', fmas, attributes.fma32b)
-    gpu_metrics.record('execute', fmas, attributes.fma32b)
+    gpu_metrics.record('fma', fmas, energies.fma32b)
+    gpu_metrics.record('execute', fmas, energies.fma32b)
 
     # instructions flow through the fetch/decode/dispatch part of the pipeline
     # nr of instructions per multiply-add is roughly 20
     nr_of_instructions: int = fmas * 20
-    gpu_metrics.record('instruction', nr_of_instructions, attributes.instruction)
+    gpu_metrics.record('instruction', nr_of_instructions, energies.instruction)
 
     # we need to read two inputs for each fma,
     # and one read for writing the result back to memory
     register_read = fmas * 3
-    gpu_metrics.record('register_read', register_read, attributes.reg_read)
+    gpu_metrics.record('register_read', register_read, energies.reg_read)
     # we write the output of the fma to the register file
     # and we need to write all the inputs into the register file too
     register_write = fmas * 3
-    gpu_metrics.record('register_write', register_write, attributes.reg_write)
+    gpu_metrics.record('register_write', register_write, energies.reg_write)
 
     # flat mv assumes we are streaming to the cache without reuse
     threads_per_block = config.threads_per_block
@@ -245,12 +247,12 @@ def flat_matvec_gpu(rows, cols, attributes: 'GraphicsProcessingUnitEnergy', conf
     nr_of_warps: int = math.ceil(rows / 32)
     gpu_metrics.nr_of_warps = nr_of_warps
 
-    gpu_metrics.record('l1_read', fmas*2, attributes.l1_read)
-    gpu_metrics.record('l1_write', fmas, attributes.l1_write)
+    gpu_metrics.record('l1_read', fmas * 2, energies.l1_read)
+    gpu_metrics.record('l1_write', fmas, energies.l1_write)
 
     # the vector elements are managed in the shared memory to avoid overfetching to global memory
-    gpu_metrics.record('smem_read', fmas, attributes.smem_read)
-    gpu_metrics.record('smem_write', 2*cols, attributes.smem_write)
+    gpu_metrics.record('smem_read', fmas, energies.smem_read)
+    gpu_metrics.record('smem_write', 2 * cols, energies.smem_write)
 
     # for the DRAM, we assume just the energy for reading the operands for compute,
     # and do not include the energy required for memory management
@@ -265,8 +267,8 @@ def flat_matvec_gpu(rows, cols, attributes: 'GraphicsProcessingUnitEnergy', conf
     total_memory_read_bursts = math.ceil(total_memory_reads / config.memory_burst_size)
     total_memory_writes = rows / config.memory_burst_size * overfetch_factor
     total_memory_write_bursts = math.ceil(total_memory_writes / config.memory_burst_size)  # each row is an element of the result vector
-    gpu_metrics.record('gmem_read', total_memory_read_bursts, attributes.gmem_read)
-    gpu_metrics.record('gmem_write', total_memory_write_bursts, attributes.gmem_write)
+    gpu_metrics.record('gmem_read', total_memory_read_bursts, energies.gmem_read)
+    gpu_metrics.record('gmem_write', total_memory_write_bursts, energies.gmem_write)
 
     # consolidate sets
     gpu_metrics.consolidate('compute', ['instruction', 'execute', 'register_read', 'register_write'])
@@ -329,3 +331,20 @@ def flat_matvec_gpu(rows, cols, attributes: 'GraphicsProcessingUnitEnergy', conf
     gpu_metrics.flops_per_watt = total_flops / power
 
     return gpu_metrics
+
+
+class DomainFlowArchitectureConfiguration:
+    pass
+
+
+def flat_matvec_dfa(rows, cols, energies: DomainFlowArchitectureEnergy, config: DomainFlowArchitectureConfiguration) \
+        -> DomainFlowArchitectureMetrics:
+    # enumerate all the energy consuming transactions for a matvec on a DFA
+    dfa_metrics = DomainFlowArchitectureMetrics("Flat MV " + str(rows) + " x " + str(cols) + " GPU")
+
+    # nr of multiply-add operations
+    fmas: int = rows * cols
+    dfa_metrics.record('fma', fmas, energies.fma32b)
+    dfa_metrics.record('execute', fmas, energies.fma32b)
+
+    return dfa_metrics
