@@ -1,0 +1,90 @@
+import numpy as np
+from mlir.ir import *
+from mlir.dialects import func, tosa
+import mlir.execution_engine
+from mlir.passmanager import PassManager
+
+def create_fc_layer_ir(input_size=10, output_size=5):
+    # Create the context and load dialects
+    context = Context()
+    tosa.register_dialect(context)
+    func.register_dialect(context)
+    
+    # Create random weights and biases
+    weights = np.random.randn(input_size, output_size).astype(np.float32)
+    biases = np.random.randn(output_size).astype(np.float32)
+    
+    # Create module
+    with context, Location.unknown():
+        module = Module.create()
+        
+        # Create function type
+        input_type = RankedTensorType.get([1, input_size], F32Type.get())
+        output_type = RankedTensorType.get([1, output_size], F32Type.get())
+        fn_type = FunctionType.get([input_type], [output_type])
+        
+        # Create the function
+        with InsertionPoint(module.body):
+            @func.FuncOp.from_py_func(input_type)
+            def fc_relu(arg):
+                # Create constant for weights
+                weight_type = RankedTensorType.get([input_size, output_size], F32Type.get())
+                weight_attr = DenseElementsAttr.get(weights, type=weight_type)
+                weight_const = tosa.ConstOp(weight_type, weight_attr)
+                
+                # Create constant for biases
+                bias_type = RankedTensorType.get([output_size], F32Type.get())
+                bias_attr = DenseElementsAttr.get(biases, type=bias_type)
+                bias_const = tosa.ConstOp(bias_type, bias_attr)
+                
+                # Create zero constant for ReLU
+                zero_type = RankedTensorType.get([1, output_size], F32Type.get())
+                zero_attr = DenseElementsAttr.get_splat(zero_type, FloatAttr.get(F32Type.get(), 0.0))
+                zero_const = tosa.ConstOp(zero_type, zero_attr)
+                
+                # Reshape bias for broadcasting
+                bias_shape_type = RankedTensorType.get([2], IntegerType.get_signless(64))
+                bias_shape = [1, output_size]
+                bias_shape_attr = DenseElementsAttr.get(np.array(bias_shape, dtype=np.int64))
+                reshaped_bias = tosa.ReshapeOp(
+                    RankedTensorType.get([1, output_size], F32Type.get()),
+                    bias_const, 
+                    bias_shape_attr
+                )
+                
+                # Matmul operation
+                matmul = tosa.MatMulOp(
+                    RankedTensorType.get([1, output_size], F32Type.get()),
+                    arg,
+                    weight_const
+                )
+                
+                # Add biases
+                add = tosa.AddOp(
+                    RankedTensorType.get([1, output_size], F32Type.get()),
+                    matmul,
+                    reshaped_bias
+                )
+                
+                # ReLU activation
+                relu = tosa.MaximumOp(
+                    RankedTensorType.get([1, output_size], F32Type.get()),
+                    add,
+                    zero_const
+                )
+                
+                return relu
+
+    return module
+
+def save_mlir_to_file(module, filename="fc_layer.mlir"):
+    with open(filename, "w") as f:
+        f.write(str(module))
+    print(f"MLIR module has been written to {filename}")
+
+if __name__ == "__main__":
+    # Create the MLIR module
+    module = create_fc_layer_ir(10, 5)
+    
+    # Save to file
+    save_mlir_to_file(module)
