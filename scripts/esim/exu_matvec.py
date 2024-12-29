@@ -21,7 +21,7 @@ def fireball_matvec(core_clock_in_ghz: float, word_size_in_bytes: int, rows: int
         sfus
     )
     exu_metrics = flat_matvec_exu(rows, cols, exu_energies, exu_config)
-    exu_metrics.report()
+    exu_metrics.report('fireball_matvec')
 
 
 if __name__ == '__main__':
